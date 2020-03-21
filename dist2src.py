@@ -17,6 +17,9 @@ from rebasehelper.specfile import SpecFile
 
 logger = logging.getLogger(__name__)
 
+# directory with downstream files
+DOWNSTREAM_FILES_DIR = "centos-packaging"
+
 
 @click.group("dist2src")
 @click.option(
@@ -125,17 +128,25 @@ def get_archive(gitdir):
     return stdout
 
 
+def _copy_files(origin: str, dest: str, dir: str, glob: str) -> None:
+    """Copy all glob files from origin/dir to dest/DOWNSTREAM_FILES_DIR/dir"""
+    origin_ = Path(origin, dir)
+    dest_ = Path(dest, DOWNSTREAM_FILES_DIR, dir)
+
+    dest_.mkdir(parents=True, exist_ok=True)
+
+    for file_ in origin_.glob(glob):
+        shutil.copy2(file_, dest_ / file_.name)
+
+
 @cli.command()
 @click.argument("origin", type=click.Path(exists=True, file_okay=False))
 @click.argument("dest", type=click.Path(exists=True, file_okay=False))
 @log_call
 @click.pass_context
 def copy_spec(ctx, origin, dest):
-    """Copy the 'SPECS' directory from a dist-git repo to a source-git repo.
-
-    In the source-git repo this is going to be under 'centos-packaging'.
-    """
-    shutil.copytree(Path(origin, "SPECS"), Path(dest, "centos-packaging", "SPECS"))
+    """Copy 'SPECS/*.spec' from a dist-git repo to a source-git repo."""
+    _copy_files(origin=origin, dest=dest, dir="SPECS", glob="*.spec")
 
 
 @cli.command()
@@ -144,18 +155,8 @@ def copy_spec(ctx, origin, dest):
 @log_call
 @click.pass_context
 def copy_patches(ctx, origin, dest):
-    """Find and copy patches from a dist-git repo to a source-git repo.
-
-    This looks for 'SOURCES/*.patch' in ORIGIN and copy everything found to
-    'centos-packaging/SOURCES/' in DEST.
-    """
-    orig_sources = Path(origin, "SOURCES")
-    dest_sources = Path(dest, "centos-packaging", "SOURCES")
-
-    dest_sources.mkdir(parents=True, exist_ok=True)
-
-    for patch in orig_sources.glob("*.patch"):
-        shutil.copy2(patch, dest_sources / patch.name)
+    """Copy 'SOURCES/*.patch' from a dist-git repo to a source-git repo."""
+    _copy_files(origin=origin, dest=dest, dir="SOURCES", glob="*.patch")
 
 
 @cli.command()
@@ -219,11 +220,11 @@ def apply_patches(ctx, gitdir):
                         package[i] = f"# {line}"
             self.spec_content.replace_section("%package", package)
 
-    specdir = os.path.join(gitdir, "centos-packaging", "SPECS")
+    specdir = os.path.join(gitdir, DOWNSTREAM_FILES_DIR, "SPECS")
     specpath = os.path.join(specdir, get_local_specfile_path([specdir]))
     logger.info(f"specpath = {specpath}")
     specfile = Specfile(
-        specpath, sources_location=os.path.join(gitdir, "centos-packaging", "SOURCES"),
+        specpath, sources_location=os.path.join(gitdir, DOWNSTREAM_FILES_DIR, "SOURCES"),
     )
     repo = git.Repo(gitdir)
 
@@ -236,7 +237,7 @@ def apply_patches(ctx, gitdir):
         except git.exc.CommandError as e:
             logger.debug(str(e))
             repo.git.apply(rel_path, p=patch.strip)
-            ctx.invoke(stage, gitdir=gitdir, exclude="centos-packaging")
+            ctx.invoke(stage, gitdir=gitdir, exclude=DOWNSTREAM_FILES_DIR)
             ctx.invoke(commit, gitdir=gitdir, m=message)
 
         # The patch is a commit now, so clean it up.
