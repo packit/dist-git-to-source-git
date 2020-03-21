@@ -13,12 +13,14 @@ import git
 import sh
 from packit.config.package_config import get_local_specfile_path
 from rebasehelper.specfile import SpecFile
-
+from yaml import dump
 
 logger = logging.getLogger(__name__)
 
 # directory with downstream files
 DOWNSTREAM_FILES_DIR = "centos-packaging"
+# build/test
+TARGETS = ["centos-stream-x86_64"]
 
 
 @click.group("dist2src")
@@ -45,10 +47,11 @@ def cli(verbose):
         \b
         $ cd git.centos.org
         $ dist2src checkout rpms/rpm c8s
-        $ dist2src get-archive rpms/rpm
         $ dist2src checkout --orphan src/rpm c8s
+        $ dist2src get-archive rpms/rpm
         $ dist2src extract-archive rpms/rpm src/rpm
         $ dist2src copy-spec rpms/rpm src/rpm
+        $ dist2src add-packit-config src/rpm
         $ dist2src copy-patches rpms/rpm src/rpm
         $ dist2src apply-patches src/rpm
         $ dist2src commit src/rpm
@@ -160,6 +163,36 @@ def copy_patches(ctx, origin, dest):
 
 
 @cli.command()
+@click.argument("dest", type=click.Path(exists=True, file_okay=False))
+@log_call
+@click.pass_context
+def add_packit_config(ctx, dest):
+    dest_dir = Path(dest)
+    spec_name = get_local_specfile_path([Path(dest, DOWNSTREAM_FILES_DIR, "SPECS")])
+    config = {
+        "specfile_path": f"{DOWNSTREAM_FILES_DIR}/SPECS/{spec_name}",
+        "upstream_ref": f"sg-start",
+        "jobs": [
+            {
+                "job": "copr_build",
+                "trigger": "pull_request",
+                "metadata": {"targets": TARGETS},
+            },
+            {
+                "job": "tests",
+                "trigger": "pull_request",
+                "metadata": {"targets": TARGETS},
+            },
+        ],
+    }
+    config_file = dest_dir / ".packit.yaml"
+    config_file.write_text(dump(config))
+
+    ctx.invoke(stage, gitdir=dest, add=".packit.yaml")
+    ctx.invoke(commit, m=".packit.yaml", gitdir=dest)
+
+
+@cli.command()
 @click.argument("origin", type=click.Path(exists=True, file_okay=False))
 @click.argument("dest", type=click.Path(exists=True, file_okay=False))
 @log_call
@@ -224,7 +257,8 @@ def apply_patches(ctx, gitdir):
     specpath = os.path.join(specdir, get_local_specfile_path([specdir]))
     logger.info(f"specpath = {specpath}")
     specfile = Specfile(
-        specpath, sources_location=os.path.join(gitdir, DOWNSTREAM_FILES_DIR, "SOURCES"),
+        specpath,
+        sources_location=os.path.join(gitdir, DOWNSTREAM_FILES_DIR, "SOURCES"),
     )
     repo = git.Repo(gitdir)
 
@@ -262,15 +296,16 @@ def commit(gitdir, m):
 
 @cli.command()
 @click.argument("gitdir", type=click.Path(exists=True, file_okay=False))
+@click.option("--add", help="Files to add content from. Accepts globs (e.g. *.spec).")
 @click.option("--exclude", help="Path to exclude from staging, relative to GITDIR")
 @log_call
-def stage(gitdir, exclude=None):
+def stage(gitdir, add=None, exclude=None):
     """Stage content in GITDIR."""
     repo = git.Repo(gitdir)
     if exclude:
         exclude = f":(exclude){exclude}"
         logger.debug(exclude)
-    repo.git.add(".", exclude)
+    repo.git.add(add or ".", exclude)
 
 
 @cli.command()
@@ -295,6 +330,7 @@ def convert(ctx, origin, dest):
     ctx.invoke(get_archive, gitdir=origin_dir)
     ctx.invoke(extract_archive, origin=origin_dir, dest=dest_dir)
     ctx.invoke(copy_spec, origin=origin_dir, dest=dest_dir)
+    ctx.invoke(add_packit_config, dest=dest_dir)
     ctx.invoke(copy_patches, origin=origin_dir, dest=dest_dir)
     ctx.invoke(apply_patches, gitdir=dest_dir)
     ctx.invoke(stage, gitdir=dest_dir)

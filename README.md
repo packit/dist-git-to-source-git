@@ -72,6 +72,7 @@ Or breaking it down:
     $ dist2src get-archive rpms/rpm
     $ dist2src extract-archive rpms/rpm src/rpm
     $ dist2src copy-spec rpms/rpm src/rpm
+    $ dist2src add-packit-config src/rpm
     $ dist2src copy-patches rpms/rpm src/rpm
     $ dist2src apply-patches src/rpm
     $ dist2src stage src/rpm
