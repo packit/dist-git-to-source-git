@@ -54,7 +54,6 @@ def cli(verbose):
         $ dist2src add-packit-config src/rpm
         $ dist2src copy-patches rpms/rpm src/rpm
         $ dist2src apply-patches src/rpm
-        $ dist2src commit src/rpm
     """
     logger.addHandler(logging.StreamHandler())
     if verbose > 1:
@@ -261,8 +260,22 @@ def apply_patches(ctx, gitdir):
         sources_location=os.path.join(gitdir, DOWNSTREAM_FILES_DIR, "SOURCES"),
     )
     repo = git.Repo(gitdir)
+    applied_patches = specfile.get_applied_patches()
 
-    for patch in specfile.get_applied_patches():
+    # TODO(csomh):
+    # the bellow is not complete, as there are many more ways to specify
+    # patches in spec files. Cover this in the future.
+    patch_indices = [p.index for p in applied_patches]
+    # comment out all Patch in %package
+    specfile.comment_patches(patch_indices)
+    # comment out all %patch in %prep
+    specfile._process_patches(patch_indices)
+    specfile.save()
+    repo.git.add(os.path.relpath(specpath, gitdir))
+    repo.git.commit(m="Downstream spec with commented patches")
+
+    # Transfer all patches that were in spec into git commits ('git am' or 'git apply')
+    for patch in applied_patches:
         message = f"Apply Patch{patch.index}: {patch.get_patch_name()}"
         logger.info(message)
         rel_path = os.path.relpath(patch.path, gitdir)
@@ -273,15 +286,8 @@ def apply_patches(ctx, gitdir):
             repo.git.apply(rel_path, p=patch.strip)
             ctx.invoke(stage, gitdir=gitdir, exclude=DOWNSTREAM_FILES_DIR)
             ctx.invoke(commit, gitdir=gitdir, m=message)
-
         # The patch is a commit now, so clean it up.
         os.unlink(patch.path)
-        # TODO(csomh):
-        # the bellow is not complete, as there are many more ways to specify
-        # patches in spec files. Cover this in the future.
-        specfile.comment_patches([patch.index])
-        specfile._process_patches([patch.index])
-        specfile.save()
 
 
 @cli.command()
@@ -333,8 +339,6 @@ def convert(ctx, origin, dest):
     ctx.invoke(add_packit_config, dest=dest_dir)
     ctx.invoke(copy_patches, origin=origin_dir, dest=dest_dir)
     ctx.invoke(apply_patches, gitdir=dest_dir)
-    ctx.invoke(stage, gitdir=dest_dir)
-    ctx.invoke(commit, gitdir=dest_dir, m="Add downstream SPEC-file")
 
 
 if __name__ == "__main__":

@@ -75,8 +75,6 @@ Or breaking it down:
     $ dist2src add-packit-config src/rpm
     $ dist2src copy-patches rpms/rpm src/rpm
     $ dist2src apply-patches src/rpm
-    $ dist2src stage src/rpm
-    $ dist2src commit -m "Add downstream SPEC-file" src/rpm
 
 `dist2src get-archive` calls [`get_sources.sh`] or the script specified in
 `DIST2SRC_GET_SOURCES`.
