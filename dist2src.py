@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 DOWNSTREAM_FILES_DIR = "centos-packaging"
 # build/test
 TARGETS = ["centos-stream-x86_64"]
+START_TAG = "sg-start"
 
 
 @click.group("dist2src")
@@ -170,7 +171,7 @@ def add_packit_config(ctx, dest):
     spec_name = get_local_specfile_path([Path(dest, DOWNSTREAM_FILES_DIR, "SPECS")])
     config = {
         "specfile_path": f"{DOWNSTREAM_FILES_DIR}/SPECS/{spec_name}",
-        "upstream_ref": f"sg-start",
+        "upstream_ref": START_TAG,
         "jobs": [
             {
                 "job": "copr_build",
@@ -273,6 +274,10 @@ def apply_patches(ctx, gitdir):
     specfile.save()
     repo.git.add(os.path.relpath(specpath, gitdir))
     repo.git.commit(m="Downstream spec with commented patches")
+
+    # Create a tag marking last commit before downstream patches
+    logger.info(f"Creating tag {START_TAG}")
+    repo.create_tag(START_TAG)
 
     # Transfer all patches that were in spec into git commits ('git am' or 'git apply')
     for patch in applied_patches:
