@@ -167,10 +167,7 @@ def copy_patches(ctx, origin, dest):
 @log_call
 @click.pass_context
 def add_packit_config(ctx, dest):
-    dest_dir = Path(dest)
-    spec_name = get_local_specfile_path([Path(dest, DOWNSTREAM_FILES_DIR, "SPECS")])
     config = {
-        "specfile_path": f"{DOWNSTREAM_FILES_DIR}/SPECS/{spec_name}",
         "upstream_ref": START_TAG,
         "jobs": [
             {
@@ -185,9 +182,7 @@ def add_packit_config(ctx, dest):
             },
         ],
     }
-    config_file = dest_dir / ".packit.yaml"
-    config_file.write_text(dump(config))
-
+    Path(dest, ".packit.yaml").write_text(dump(config))
     ctx.invoke(stage, gitdir=dest, add=".packit.yaml")
     ctx.invoke(commit, m=".packit.yaml", gitdir=dest)
 
