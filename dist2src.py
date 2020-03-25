@@ -253,12 +253,13 @@ def apply_patches(ctx, gitdir):
                         package[i] = f"# {line}"
             self.spec_content.replace_section("%package", package)
 
-    specdir = os.path.join(gitdir, DOWNSTREAM_FILES_DIR, "SPECS")
-    specpath = os.path.join(specdir, get_local_specfile_path([specdir]))
+    downstream_files_dir = Path(gitdir, DOWNSTREAM_FILES_DIR)
+    specdir = downstream_files_dir / "SPECS"
+    specpath = specdir / get_local_specfile_path(specdir)
     logger.info(f"specpath = {specpath}")
     specfile = Specfile(
         specpath,
-        sources_location=os.path.join(gitdir, DOWNSTREAM_FILES_DIR, "SOURCES"),
+        sources_location=str(downstream_files_dir / "SOURCES"),
     )
     repo = git.Repo(gitdir)
     applied_patches = specfile.get_applied_patches()
@@ -272,7 +273,7 @@ def apply_patches(ctx, gitdir):
     # comment out all %patch in %prep
     specfile._process_patches(patch_indices)
     specfile.save()
-    repo.git.add(os.path.relpath(specpath, gitdir))
+    repo.git.add(specpath.relative_to(gitdir))
     repo.git.commit(m="Downstream spec with commented patches")
 
     # Create a tag marking last commit before downstream patches
