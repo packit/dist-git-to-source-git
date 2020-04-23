@@ -17,8 +17,6 @@ from yaml import dump
 
 logger = logging.getLogger(__name__)
 
-# directory with downstream files
-DOWNSTREAM_FILES_DIR = "centos-packaging"
 # build/test
 TARGETS = ["centos-stream-x86_64"]
 START_TAG = "sg-start"
@@ -132,9 +130,9 @@ def get_archive(gitdir):
 
 
 def _copy_files(origin: str, dest: str, dir: str, glob: str) -> None:
-    """Copy all glob files from origin/dir to dest/DOWNSTREAM_FILES_DIR/dir"""
+    """Copy all glob files from origin/dir to dest/dir"""
     origin_ = Path(origin, dir)
-    dest_ = Path(dest, DOWNSTREAM_FILES_DIR, dir)
+    dest_ = Path(dest, dir)
 
     dest_.mkdir(parents=True, exist_ok=True)
 
@@ -248,13 +246,12 @@ def apply_patches(ctx, gitdir):
                         package[i] = f"# {line}"
             self.spec_content.replace_section("%package", package)
 
-    downstream_files_dir = Path(gitdir, DOWNSTREAM_FILES_DIR)
-    specdir = downstream_files_dir / "SPECS"
+    specdir = Path(gitdir, "SPECS")
     specpath = specdir / get_local_specfile_path(specdir)
     logger.info(f"specpath = {specpath}")
     specfile = Specfile(
         specpath,
-        sources_location=str(downstream_files_dir / "SOURCES"),
+        sources_location=str(Path(gitdir, "SOURCES")),
     )
     repo = git.Repo(gitdir)
     applied_patches = specfile.get_applied_patches()
@@ -285,7 +282,7 @@ def apply_patches(ctx, gitdir):
         except git.exc.CommandError as e:
             logger.debug(str(e))
             repo.git.apply(rel_path, p=patch.strip)
-            ctx.invoke(stage, gitdir=gitdir, exclude=DOWNSTREAM_FILES_DIR)
+            ctx.invoke(stage, gitdir=gitdir, exclude="SOURCES")
             ctx.invoke(commit, gitdir=gitdir, m=message)
         # The patch is a commit now, so clean it up.
         os.unlink(patch.path)
