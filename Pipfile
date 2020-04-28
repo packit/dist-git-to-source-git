@@ -10,6 +10,7 @@ click = "*"
 gitpython = "*"
 rebasehelper = "*"
 packitos = "*"
+sh = "*"
 
 [requires]
 python_version = "3.7"

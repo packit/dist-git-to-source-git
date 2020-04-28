@@ -47,6 +47,33 @@ recreate the source-git branch.
 
 What should happen when the spec file or the patches in dist-git are updated?
 
+
+## Usage
+
+This project is using pipenv to manage dependencies.
+```
+$ dnf install pipenv
+```
+
+Create a new pipenv environment:
+```
+$ pipenv shell
+```
+
+Install all the dependencies:
+```
+$ pipenv install
+```
+
+You can use the tool now:
+```
+$ ./dist2src.py --help
+Usage: dist2src.py [OPTIONS] COMMAND [ARGS]...
+
+...
+```
+
+
 ## The Process
 
 When creating a source-git commit from dist-git, the process will be the
