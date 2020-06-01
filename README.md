@@ -50,6 +50,8 @@ What should happen when the spec file or the patches in dist-git are updated?
 
 ## Usage
 
+
+### [pipenv](https://github.com/pypa/pipenv)
 This project is using pipenv to manage dependencies.
 ```
 $ dnf install pipenv
@@ -71,6 +73,13 @@ $ ./dist2src.py --help
 Usage: dist2src.py [OPTIONS] COMMAND [ARGS]...
 
 ...
+```
+
+### via dnf
+
+Alternatively to pipenv, you can get the dependencies from Fedora via dnf:
+```
+$ dnf install python3-{sh,click,GitPython,packit}
 ```
 
 
