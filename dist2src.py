@@ -166,8 +166,11 @@ def copy_all_sources(ctx, origin, dest):
 @click.argument("dest", type=click.Path(exists=True, file_okay=False))
 @log_call
 @click.pass_context
-def add_packit_config(ctx, dest):
+def add_packit_config(ctx, dest: Path):
     config = {
+        # e.g. qemu-kvm ships "some" spec file in their tarball
+        # packit doesn't need to look for the spec when we know where it is
+        "specfile_path": f"SPECS/{dest.name}.spec",
         "upstream_ref": START_TAG,
         "jobs": [
             {
@@ -336,7 +339,7 @@ def convert(ctx, origin, dest):
     ctx.invoke(get_archive, gitdir=origin_dir)
     ctx.invoke(extract_archive, origin=origin_dir, dest=dest_dir)
     ctx.invoke(copy_spec, origin=origin_dir, dest=dest_dir)
-    ctx.invoke(add_packit_config, dest=dest_dir)
+    ctx.invoke(add_packit_config, dest=Path(dest_dir))
     ctx.invoke(copy_all_sources, origin=origin_dir, dest=dest_dir)
     ctx.invoke(apply_patches, gitdir=dest_dir)
 
