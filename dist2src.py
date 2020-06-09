@@ -129,10 +129,12 @@ def get_archive(gitdir):
     return stdout
 
 
-def _copy_files(origin: str, dest: str, dir: str, glob: str) -> None:
-    """Copy all glob files from origin/dir to dest/dir"""
-    origin_ = Path(origin, dir)
-    dest_ = Path(dest, dir)
+def _copy_files(origin: str, dest: str, origin_dir: str, dest_dir: str, glob: str) -> None:
+    """
+    Copy all glob files from origin/origin_dir to dest/dest_dir
+    """
+    origin_ = Path(origin, origin_dir)
+    dest_ = Path(dest, dest_dir)
 
     dest_.mkdir(parents=True, exist_ok=True)
 
@@ -147,7 +149,7 @@ def _copy_files(origin: str, dest: str, dir: str, glob: str) -> None:
 @click.pass_context
 def copy_spec(ctx, origin, dest):
     """Copy 'SPECS/*.spec' from a dist-git repo to a source-git repo."""
-    _copy_files(origin=origin, dest=dest, dir="SPECS", glob="*.spec")
+    _copy_files(origin=origin, dest=dest, origin_dir="SPECS", dest_dir="SPECS", glob="*.spec")
 
 
 @cli.command()
@@ -155,17 +157,20 @@ def copy_spec(ctx, origin, dest):
 @click.argument("dest", type=click.Path(exists=True, file_okay=False))
 @log_call
 @click.pass_context
-def copy_patches(ctx, origin, dest):
-    """Copy 'SOURCES/*.patch' from a dist-git repo to a source-git repo."""
-    _copy_files(origin=origin, dest=dest, dir="SOURCES", glob="*.patch")
+def copy_all_sources(ctx, origin, dest):
+    """Copy 'SOURCES/*' from a dist-git repo to a source-git repo."""
+    _copy_files(origin=origin, dest=dest, origin_dir="SOURCES", dest_dir="SPECS", glob="*")
 
 
 @cli.command()
 @click.argument("dest", type=click.Path(exists=True, file_okay=False))
 @log_call
 @click.pass_context
-def add_packit_config(ctx, dest):
+def add_packit_config(ctx, dest: Path):
     config = {
+        # e.g. qemu-kvm ships "some" spec file in their tarball
+        # packit doesn't need to look for the spec when we know where it is
+        "specfile_path": f"SPECS/{dest.name}.spec",
         "upstream_ref": START_TAG,
         "jobs": [
             {
@@ -251,7 +256,7 @@ def apply_patches(ctx, gitdir):
     logger.info(f"specpath = {specpath}")
     specfile = Specfile(
         specpath,
-        sources_location=str(Path(gitdir, "SOURCES")),
+        sources_location=str(Path(gitdir, "SPECS")),
     )
     repo = git.Repo(gitdir)
     applied_patches = specfile.get_applied_patches()
@@ -282,7 +287,7 @@ def apply_patches(ctx, gitdir):
         except git.exc.CommandError as e:
             logger.debug(str(e))
             repo.git.apply(rel_path, p=patch.strip)
-            ctx.invoke(stage, gitdir=gitdir, exclude="SOURCES")
+            ctx.invoke(stage, gitdir=gitdir, exclude="SPECS")
             ctx.invoke(commit, gitdir=gitdir, m=message)
         # The patch is a commit now, so clean it up.
         os.unlink(patch.path)
@@ -334,8 +339,8 @@ def convert(ctx, origin, dest):
     ctx.invoke(get_archive, gitdir=origin_dir)
     ctx.invoke(extract_archive, origin=origin_dir, dest=dest_dir)
     ctx.invoke(copy_spec, origin=origin_dir, dest=dest_dir)
-    ctx.invoke(add_packit_config, dest=dest_dir)
-    ctx.invoke(copy_patches, origin=origin_dir, dest=dest_dir)
+    ctx.invoke(add_packit_config, dest=Path(dest_dir))
+    ctx.invoke(copy_all_sources, origin=origin_dir, dest=dest_dir)
     ctx.invoke(apply_patches, gitdir=dest_dir)
 
 
