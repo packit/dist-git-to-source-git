@@ -50,38 +50,47 @@ What should happen when the spec file or the patches in dist-git are updated?
 
 ## Usage
 
+In order to have the script and it's dependencies installed in an isolated
+environment, create and activate a virtual environment:
 
-### [pipenv](https://github.com/pypa/pipenv)
-This project is using pipenv to manage dependencies.
 ```
-$ dnf install pipenv
-```
-
-Create a new pipenv environment:
-```
-$ pipenv shell
+$ virtualenv ~/.virtualenvs/dist-git-to-source-git
+$ source ~/.virtualenvs/dist-git-to-source-git/bin/activate
 ```
 
-Install all the dependencies:
+Install the script:
+
 ```
-$ pipenv install
+$ pip install -e .
 ```
 
-You can use the tool now:
-```
-$ ./dist2src.py --help
-Usage: dist2src.py [OPTIONS] COMMAND [ARGS]...
+Create a symlink to the script in a directory in your `PATH`:
 
-...
+```
+$ ln -s ~/.virtualenvs/dist-git-to-source-git/bin/dist2src ~/bin/dist2src
 ```
 
-### via dnf
+The script is available even after deactivating the virtual environment:
 
-Alternatively to pipenv, you can get the dependencies from Fedora via dnf:
 ```
-$ dnf install python3-{sh,click,GitPython,packit}
+$ deactivate
+$ dist2src --help
+Usage: dist2src [OPTIONS] COMMAND [ARGS]...
+.
+.
+.
 ```
 
+Alternatively you can install in your users home directory with:
+
+```
+$ pip install -u .
+```
+
+`dist2src get-archive` calls [`get_sources.sh`] or the script specified in
+`DIST2SRC_GET_SOURCES`, so you either need to get and place this script in a
+directory in your PATH or use the environment variable to specify the tools to
+download the sources from the lookaside cache of the dist-git of your choice.
 
 ## The Process
 
@@ -111,9 +120,6 @@ Or breaking it down:
     $ dist2src add-packit-config src/rpm
     $ dist2src copy-patches rpms/rpm src/rpm
     $ dist2src apply-patches src/rpm
-
-`dist2src get-archive` calls [`get_sources.sh`] or the script specified in
-`DIST2SRC_GET_SOURCES`.
 
 [How to source-git?]: https://packit.dev/docs/how-to-source-git
 [`get_sources.sh`]: https://wiki.centos.org/Sources#get_sources.sh_script
