@@ -202,22 +202,30 @@ def extract_archive(ctx, origin, dest):
 
     After extracting the archive, stage and commit the changes in DEST.
     """
-    # Make sure, the archive exists and use the STDOUT of get_sources.sh
-    # to find out its path.
+    # Make sure, the archives exist and use the STDOUT of get_sources.sh
+    # to find out their paths.
     stdout = ""
-    while "exists" not in stdout:
+    all_downloaded = False
+    while not all_downloaded:
         stdout = ctx.invoke(get_archive, gitdir=origin)
-    archive = Path(origin, stdout.partition(" exists")[0])
+        all_downloaded = all(filter(lambda x: " exists" in x, stdout.strip().split("\n")))
+    archives = []
+    for line in stdout.strip().split("\n"):
+        logger.debug(f"Line: {line}")
+        archive = Path(origin, line.partition(" exists")[0])
+        logger.debug(f"Archive: {archive}")
+        archives.append(archive)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        shutil.unpack_archive(archive, tmpdir)
-        # Expect an archive with a single directory.
-        assert len(os.listdir(tmpdir)) == 1
-        topdir = Path(tmpdir, os.listdir(tmpdir)[0])
-        # These are all the files under the directory that was
-        # in the archive.
-        for f in topdir.iterdir():
-            shutil.move(f, Path(dest, f.name))
+    for archive in archives:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            shutil.unpack_archive(archive, tmpdir)
+            # Expect an archive with a single directory.
+            assert len(os.listdir(tmpdir)) == 1
+            topdir = Path(tmpdir, os.listdir(tmpdir)[0])
+            # These are all the files under the directory that was
+            # in the archive.
+            for f in topdir.iterdir():
+                shutil.move(f, Path(dest, f.name))
 
     ctx.invoke(stage, gitdir=dest)
     ctx.invoke(commit, m="Unpack archive", gitdir=dest)
