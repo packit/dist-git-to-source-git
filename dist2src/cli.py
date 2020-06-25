@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import tempfile
+import timeout_decorator
 from pathlib import Path
 
 import click
@@ -195,6 +196,7 @@ def add_packit_config(ctx, dest: Path):
 @click.argument("dest", type=click.Path(exists=True, file_okay=False))
 @log_call
 @click.pass_context
+@timeout_decorator.timeout(300)
 def extract_archive(ctx, origin, dest):
     """Extract the source archive found in ORIGIN to DEST.
 
@@ -212,7 +214,8 @@ def extract_archive(ctx, origin, dest):
     with tempfile.TemporaryDirectory() as tmpdir:
         shutil.unpack_archive(archive, tmpdir)
         # Expect an archive with a single directory.
-        assert len(os.listdir(tmpdir)) == 1
+        if len(os.listdir(tmpdir)) != 1:
+            raise ValueError("Archive content is not a single directory")
         topdir = Path(tmpdir, os.listdir(tmpdir)[0])
         # These are all the files under the directory that was
         # in the archive.
