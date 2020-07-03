@@ -1,3 +1,6 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
 .PHONY: usage convert clean
 
 PACKAGE ?= rpm

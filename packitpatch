@@ -1,5 +1,8 @@
 #!/usr/bin/bash
 
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
 set -eu
 
 # This patchnum is not the same as the patchnum in the spec file, as we just
