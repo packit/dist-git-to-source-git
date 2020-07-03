@@ -6,15 +6,17 @@ import os
 import re
 import shutil
 import tempfile
-import timeout_decorator
 from pathlib import Path
 
 import click
 import git
 import sh
-from packit.config.package_config import get_local_specfile_path
+import timeout_decorator
 from rebasehelper.specfile import SpecFile
 from yaml import dump
+
+from packit.config.package_config import get_local_specfile_path
+from packit.patches import PatchMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +132,9 @@ def get_archive(gitdir):
     return stdout
 
 
-def _copy_files(origin: str, dest: str, origin_dir: str, dest_dir: str, glob: str) -> None:
+def _copy_files(
+    origin: str, dest: str, origin_dir: str, dest_dir: str, glob: str
+) -> None:
     """
     Copy all glob files from origin/origin_dir to dest/dest_dir
     """
@@ -150,7 +154,9 @@ def _copy_files(origin: str, dest: str, origin_dir: str, dest_dir: str, glob: st
 @click.pass_context
 def copy_spec(ctx, origin, dest):
     """Copy 'SPECS/*.spec' from a dist-git repo to a source-git repo."""
-    _copy_files(origin=origin, dest=dest, origin_dir="SPECS", dest_dir="SPECS", glob="*.spec")
+    _copy_files(
+        origin=origin, dest=dest, origin_dir="SPECS", dest_dir="SPECS", glob="*.spec"
+    )
 
 
 @cli.command()
@@ -160,7 +166,9 @@ def copy_spec(ctx, origin, dest):
 @click.pass_context
 def copy_all_sources(ctx, origin, dest):
     """Copy 'SOURCES/*' from a dist-git repo to a source-git repo."""
-    _copy_files(origin=origin, dest=dest, origin_dir="SOURCES", dest_dir="SPECS", glob="*")
+    _copy_files(
+        origin=origin, dest=dest, origin_dir="SOURCES", dest_dir="SPECS", glob="*"
+    )
 
 
 @cli.command()
