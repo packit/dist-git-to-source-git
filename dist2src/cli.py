@@ -6,15 +6,17 @@ import os
 import re
 import shutil
 import tempfile
-import timeout_decorator
 from pathlib import Path
 
 import click
 import git
 import sh
-from packit.config.package_config import get_local_specfile_path
+import timeout_decorator
 from rebasehelper.specfile import SpecFile
 from yaml import dump
+
+from packit.config.package_config import get_local_specfile_path
+from packit.patches import PatchMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +54,7 @@ def cli(verbose):
         $ dist2src extract-archive rpms/rpm src/rpm
         $ dist2src copy-spec rpms/rpm src/rpm
         $ dist2src add-packit-config src/rpm
-        $ dist2src copy-patches rpms/rpm src/rpm
+        $ dist2src copy-all-sources rpms/rpm src/rpm
         $ dist2src apply-patches src/rpm
     """
     logger.addHandler(logging.StreamHandler())
@@ -130,7 +132,9 @@ def get_archive(gitdir):
     return stdout
 
 
-def _copy_files(origin: str, dest: str, origin_dir: str, dest_dir: str, glob: str) -> None:
+def _copy_files(
+    origin: str, dest: str, origin_dir: str, dest_dir: str, glob: str
+) -> None:
     """
     Copy all glob files from origin/origin_dir to dest/dest_dir
     """
@@ -150,7 +154,9 @@ def _copy_files(origin: str, dest: str, origin_dir: str, dest_dir: str, glob: st
 @click.pass_context
 def copy_spec(ctx, origin, dest):
     """Copy 'SPECS/*.spec' from a dist-git repo to a source-git repo."""
-    _copy_files(origin=origin, dest=dest, origin_dir="SPECS", dest_dir="SPECS", glob="*.spec")
+    _copy_files(
+        origin=origin, dest=dest, origin_dir="SPECS", dest_dir="SPECS", glob="*.spec"
+    )
 
 
 @cli.command()
@@ -160,7 +166,9 @@ def copy_spec(ctx, origin, dest):
 @click.pass_context
 def copy_all_sources(ctx, origin, dest):
     """Copy 'SOURCES/*' from a dist-git repo to a source-git repo."""
-    _copy_files(origin=origin, dest=dest, origin_dir="SOURCES", dest_dir="SPECS", glob="*")
+    _copy_files(
+        origin=origin, dest=dest, origin_dir="SOURCES", dest_dir="SPECS", glob="*"
+    )
 
 
 @cli.command()
@@ -227,10 +235,16 @@ def extract_archive(ctx, origin, dest):
 
 
 @cli.command()
+@click.option(
+    "--remove-patches",
+    is_flag=True,
+    default=False,
+    help="If set, patches will be commented-out.",
+)
 @click.argument("gitdir", type=click.Path(exists=True, file_okay=False))
 @log_call
 @click.pass_context
-def apply_patches(ctx, gitdir):
+def apply_patches(ctx, remove_patches, gitdir):
     """Apply the patches used in the SPEC-file found in GITDIR.
 
     Apply all the patches used in the SPEC-file, then update the
@@ -257,24 +271,19 @@ def apply_patches(ctx, gitdir):
     specdir = Path(gitdir, "SPECS")
     specpath = specdir / get_local_specfile_path(specdir)
     logger.info(f"specpath = {specpath}")
-    specfile = Specfile(
-        specpath,
-        sources_location=str(Path(gitdir, "SPECS")),
-    )
+    specfile = Specfile(specpath, sources_location=str(Path(gitdir, "SPECS")),)
     repo = git.Repo(gitdir)
     applied_patches = specfile.get_applied_patches()
 
-    # TODO(csomh):
-    # the bellow is not complete, as there are many more ways to specify
-    # patches in spec files. Cover this in the future.
-    patch_indices = [p.index for p in applied_patches]
-    # comment out all Patch in %package
-    specfile.comment_patches(patch_indices)
-    # comment out all %patch in %prep
-    specfile._process_patches(patch_indices)
-    specfile.save()
-    repo.git.add(specpath.relative_to(gitdir))
-    repo.git.commit(m="Downstream spec with commented patches")
+    if remove_patches:
+        patch_indices = [p.index for p in applied_patches]
+        # comment out all Patch in %package
+        specfile.comment_patches(patch_indices)
+        # comment out all %patch in %prep
+        specfile._process_patches(patch_indices)
+        specfile.save()
+        repo.git.add(specpath.relative_to(gitdir))
+        repo.git.commit(m="Downstream spec with commented patches", allow_empty=True)
 
     # Create a tag marking last commit before downstream patches
     logger.info(f"Creating tag {START_TAG}")
@@ -282,16 +291,25 @@ def apply_patches(ctx, gitdir):
 
     # Transfer all patches that were in spec into git commits ('git am' or 'git apply')
     for patch in applied_patches:
-        message = f"Apply Patch{patch.index}: {patch.get_patch_name()}"
-        logger.info(message)
+        metadata = PatchMetadata(
+            name=patch.get_patch_name(),
+            path=Path(patch.path),
+            location_in_specfile=patch.index,
+            present_in_specfile=not remove_patches,
+        )
+
+        logger.info(f"Apply {metadata.name}")
         rel_path = os.path.relpath(patch.path, gitdir)
         try:
-            repo.git.am(rel_path)
+            repo.git.am(
+                metadata.path.absolute().relative_to(repo.working_dir),
+                m=metadata.commit_message,
+            )
         except git.exc.CommandError as e:
             logger.debug(str(e))
             repo.git.apply(rel_path, p=patch.strip)
             ctx.invoke(stage, gitdir=gitdir, exclude="SPECS")
-            ctx.invoke(commit, gitdir=gitdir, m=message)
+            ctx.invoke(commit, gitdir=gitdir, m=metadata.commit_message)
         # The patch is a commit now, so clean it up.
         os.unlink(patch.path)
 
