@@ -16,7 +16,13 @@ from rebasehelper.specfile import SpecFile
 from yaml import dump
 
 from packit.config.package_config import get_local_specfile_path
-from packit.patches import PatchMetadata
+
+# packitos currently requires python>=3.7, but CentOS 8 has python==3.6 by default.
+# Remove this once a version of packitos>0.13.1 is released.
+try:
+    from packit.patches import PatchMetadata
+except ImportError:
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -94,11 +100,7 @@ def checkout(path, branch, orphan=False):
     Checking out BRANCH is done with the `-B` flag, which means the
     branch is created if it doesn't exist or reset, if it does.
     """
-    if path.startswith(os.pardir):
-        raise ValueError("This is bad, don't start path with '..'")
-
-    if not os.path.exists(path):
-        os.makedirs(path)
+    Path(path).mkdir(parents=True, exist_ok=True)
 
     repo = git.Repo.init(path)
     options = {}
@@ -132,19 +134,69 @@ def get_archive(gitdir):
     return stdout
 
 
-def _copy_files(
-    origin: str, dest: str, origin_dir: str, dest_dir: str, glob: str
-) -> None:
-    """
-    Copy all glob files from origin/origin_dir to dest/dest_dir
-    """
-    origin_ = Path(origin, origin_dir)
-    dest_ = Path(dest, dest_dir)
+@cli.command()
+@click.argument("path", type=click.Path(exists=True, file_okay=False))
+@log_call
+def run_prep(path):
+    """Run `rpmbuild -bp` in GITDIR.
 
-    dest_.mkdir(parents=True, exist_ok=True)
+    PATH needs to be a dist-git repository.
+    """
+    rpmbuild = sh.Command("rpmbuild")
 
-    for file_ in origin_.glob(glob):
-        shutil.copy2(file_, dest_ / file_.name)
+    with sh.pushd(path):
+        cwd = Path.cwd()
+        logger.debug(f"Running rpmbuild in {cwd}")
+        stdout = rpmbuild(
+            "--nodeps",
+            "--define",
+            f"_topdir {cwd}",
+            "--define",
+            "__scm git",
+            "-bp",
+            f"SPECS/{cwd.name}.spec",
+        )
+
+    return stdout
+
+
+@cli.command()
+@click.argument("source_dir", type=click.Path(exists=True, file_okay=False))
+@click.argument("dest_dir", type=click.Path(exists=True, file_okay=False))
+@click.argument("dest_branch", type=click.STRING)
+@log_call
+def pull_branch(source_dir, dest_dir, dest_branch):
+    """Pull the branch produced by 'rpmbuild -bp' and rebase
+    it on top of DEST_BRANCH.
+
+    SOURCE_DIR is a dist-git repository, in which there is a 'BUILD'
+    subdirectory, having a single subdirectory, which is a Git repository
+    produced by 'rpmbuild -bp'.
+
+    DEST_DIR is an already initialized source-git repository.
+
+    DEST_BRANCH is the branch on which the history should be pulled.
+    """
+    source_git_repo = [d for d in (source_dir / "BUILD").iterdir() if d.is_dir()]
+    if len(source_git_repo) > 1:
+        raise RuntimeError(f"More than one directory found in {source_dir}")
+    if len(source_git_repo) < 1:
+        raise RuntimeError(f"No subdirectory found in {source_dir}")
+    # Make it absolute, so that it's easier to use it with 'pull' running from dest_dir
+    source_git_repo = source_git_repo[0].absolute()
+
+    repo = git.Repo(dest_dir)
+    repo.git.pull("--ff-only", source_git_repo, f"+master:{dest_branch}")
+
+
+def _copy_files(origin: Path, dest: Path, glob: str) -> None:
+    """
+    Copy all glob files from origin to dest
+    """
+    dest.mkdir(parents=True, exist_ok=True)
+
+    for file_ in origin.glob(glob):
+        shutil.copy2(file_, dest / file_.name)
 
 
 @cli.command()
@@ -154,9 +206,7 @@ def _copy_files(
 @click.pass_context
 def copy_spec(ctx, origin, dest):
     """Copy 'SPECS/*.spec' from a dist-git repo to a source-git repo."""
-    _copy_files(
-        origin=origin, dest=dest, origin_dir="SPECS", dest_dir="SPECS", glob="*.spec"
-    )
+    _copy_files(origin=Path(origin) / "SPECS", dest=Path(dest) / "SPECS", glob="*.spec")
 
 
 @cli.command()
@@ -166,9 +216,7 @@ def copy_spec(ctx, origin, dest):
 @click.pass_context
 def copy_all_sources(ctx, origin, dest):
     """Copy 'SOURCES/*' from a dist-git repo to a source-git repo."""
-    _copy_files(
-        origin=origin, dest=dest, origin_dir="SOURCES", dest_dir="SPECS", glob="*"
-    )
+    _copy_files(origin=origin / "SOURCES", dest=dest / "SPECS", glob="*")
 
 
 @cli.command()
@@ -220,7 +268,7 @@ def extract_archive(ctx, origin, dest):
     archive = Path(origin, stdout.partition(" exists")[0])
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        shutil.unpack_archive(archive, tmpdir)
+        shutil.unpack_archive(str(archive), tmpdir)
         # Expect an archive with a single directory.
         if len(os.listdir(tmpdir)) != 1:
             raise ValueError("Archive content is not a single directory")
@@ -363,6 +411,36 @@ def convert(ctx, origin, dest):
     ctx.invoke(add_packit_config, dest=Path(dest_dir))
     ctx.invoke(copy_all_sources, origin=origin_dir, dest=dest_dir)
     ctx.invoke(apply_patches, gitdir=dest_dir)
+
+
+@cli.command("convert-v2")
+@click.argument("origin", type=click.STRING)
+@click.argument("dest", type=click.STRING)
+@log_call
+@click.pass_context
+def convert_v2(ctx, origin, dest):
+    """Convert a dist-git repository into a source-git repository.
+
+    ORIGIN and DEST are in the format of
+
+        REPO_PATH:BRANCH
+
+    This command calls all the other commands.
+    """
+    origin_dir, origin_branch = origin.split(":")
+    dest_dir, dest_branch = dest.split(":")
+
+    ctx.invoke(checkout, path=origin_dir, branch=origin_branch)
+    ctx.invoke(checkout, path=dest_dir, branch=dest_branch, orphan=True)
+    ctx.invoke(get_archive, gitdir=origin_dir)
+    ctx.invoke(run_prep, path=origin_dir)
+    ctx.invoke(
+        pull_branch, source_dir=origin_dir, dest_dir=dest_dir, dest_branch=dest_branch
+    )
+    ctx.invoke(copy_spec, origin=origin_dir, dest=dest_dir)
+    ctx.invoke(stage, gitdir=dest_dir, add="SPECS")
+    ctx.invoke(commit, m="Add spec-file for the distribution", gitdir=dest_dir)
+    ctx.invoke(add_packit_config, dest=Path(dest_dir))
 
 
 if __name__ == "__main__":
