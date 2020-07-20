@@ -1,9 +1,6 @@
-# One macro to (optionally) do it all.
-# -S<scm name>	Sets the used patch application style, eg '-S git' enables
-#           	usage of git repository and per-patch commits.
-# -N		Disable automatic patch application
-# -p<num>	Use -p<num> for patch application
-%packitsetup(a:b:cDn:Tq)\
+# This is almost the same as %autosetup: runs %setup then %__scm_setup_* and
+# defines __patch as a custom script.
+%gitsetup(a:b:cDn:Tq)\
 %setup %{-a} %{-b} %{-c} %{-D} %{-n} %{-T} %{-q}\
-%global __patch __scm_apply_%{__scm}\
+%global __patch /usr/bin/packitpatch\
 %{expand:%__scm_setup_%{__scm} %{!-q:-v}}

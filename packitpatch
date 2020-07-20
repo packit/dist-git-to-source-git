@@ -1,0 +1,12 @@
+#!/usr/bin/bash
+
+set -eu
+
+# This patchnum is not the same as the patchnum in the spec file, as we just
+# sequentially count the patches here.
+PATCHNUM=1
+[ -f /tmp/patchnum ] && PATCHNUM=$(cat /tmp/patchnum)
+cat - | /usr/bin/patch $@
+git add .
+git commit -m "Apply patch #$PATCHNUM"
+echo $((PATCHNUM+1)) > /tmp/patchnum

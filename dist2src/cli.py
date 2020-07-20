@@ -147,15 +147,28 @@ def run_prep(path):
     with sh.pushd(path):
         cwd = Path.cwd()
         logger.debug(f"Running rpmbuild in {cwd}")
-        stdout = rpmbuild(
-            "--nodeps",
-            "--define",
-            f"_topdir {cwd}",
-            "--define",
-            "__scm git",
-            "-bp",
-            f"SPECS/{cwd.name}.spec",
-        )
+        specfile_path = Path(f"SPECS/{cwd.name}.spec")
+        setup = re.compile("^%setup ", re.MULTILINE)
+        spec = specfile_path.read_text()
+        spec, number_of_subs = setup.subn("%gitsetup ", spec)
+        if number_of_subs > 1:
+            raise RuntimeError("Wow! Multiple %setup macros in the spec file!")
+        if number_of_subs:
+            specfile_path.write_text(spec)
+        try:
+            stdout = rpmbuild(
+                "--nodeps",
+                "--define",
+                f"_topdir {cwd}",
+                "--define",
+                "__scm git",
+                "-bp",
+                specfile_path,
+            )
+        except sh.ErrorReturnCode as e:
+            for line in e.stderr.splitlines():
+                logger.debug(str(line))
+            raise
 
     return stdout
 
