@@ -173,6 +173,32 @@ def run_prep(path):
     return stdout
 
 
+def get_build_dir(path: Path):
+    build_dirs = [d for d in (path / "BUILD").iterdir() if d.is_dir()]
+    if len(build_dirs) > 1:
+        raise RuntimeError(f"More than one directory found in {path}")
+    if len(build_dirs) < 1:
+        raise RuntimeError(f"No subdirectory found in {path}")
+    return build_dirs[0]
+
+
+@cli.command()
+@click.argument("path", type=click.Path(exists=True, file_okay=False))
+@log_call
+@click.pass_context
+def commit_all(ctx, path):
+    """Git add and commit all the changes in PATH.
+
+    Do this, b/c some %prep sections will modify source code with scripts,
+    and the current understanding is that we should capture these changes.
+    """
+    build_dir = get_build_dir(Path(path))
+    repo = git.Repo(build_dir)
+    if repo.is_dirty():
+        ctx.invoke(stage, gitdir=build_dir)
+        ctx.invoke(commit, m="Various changes", gitdir=build_dir)
+
+
 @cli.command()
 @click.argument("source_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("dest_dir", type=click.Path(exists=True, file_okay=False))
@@ -190,13 +216,9 @@ def pull_branch(source_dir, dest_dir, dest_branch):
 
     DEST_BRANCH is the branch on which the history should be pulled.
     """
-    source_git_repo = [d for d in (source_dir / "BUILD").iterdir() if d.is_dir()]
-    if len(source_git_repo) > 1:
-        raise RuntimeError(f"More than one directory found in {source_dir}")
-    if len(source_git_repo) < 1:
-        raise RuntimeError(f"No subdirectory found in {source_dir}")
-    # Make it absolute, so that it's easier to use it with 'pull' running from dest_dir
-    source_git_repo = source_git_repo[0].absolute()
+    # Make it absolute, so that it's easier to use it with 'fetch'
+    # running from dest_dir
+    source_git_repo = get_build_dir(Path(source_dir)).absolute()
 
     repo = git.Repo(dest_dir)
     repo.git.pull("--ff-only", source_git_repo, f"+master:{dest_branch}")
@@ -426,13 +448,14 @@ def convert(ctx, origin, dest):
     ctx.invoke(apply_patches, gitdir=dest_dir)
 
 
-@cli.command("convert-v2")
+@cli.command("convert-with-prep")
 @click.argument("origin", type=click.STRING)
 @click.argument("dest", type=click.STRING)
 @log_call
 @click.pass_context
-def convert_v2(ctx, origin, dest):
-    """Convert a dist-git repository into a source-git repository.
+def conert_with_prep(ctx, origin, dest):
+    """Convert a dist-git repository into a source-git repository, using
+    'rpmbuild' and executing the "%prep" stage from the spec file.
 
     ORIGIN and DEST are in the format of
 
@@ -447,6 +470,7 @@ def convert_v2(ctx, origin, dest):
     ctx.invoke(checkout, path=dest_dir, branch=dest_branch, orphan=True)
     ctx.invoke(get_archive, gitdir=origin_dir)
     ctx.invoke(run_prep, path=origin_dir)
+    ctx.invoke(commit_all, path=origin_dir)
     ctx.invoke(
         pull_branch, source_dir=origin_dir, dest_dir=dest_dir, dest_branch=dest_branch
     )
