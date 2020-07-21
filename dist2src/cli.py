@@ -221,7 +221,12 @@ def pull_branch(source_dir, dest_dir, dest_branch):
     source_git_repo = get_build_dir(Path(source_dir)).absolute()
 
     repo = git.Repo(dest_dir)
-    repo.git.pull("--ff-only", source_git_repo, f"+master:{dest_branch}")
+    repo.git.fetch(source_git_repo, "+master:updates")
+    repo.git.checkout("updates")
+    repo.git.rebase("--root", "--onto", f"{dest_branch}")
+    repo.git.checkout(f"{dest_branch}")
+    repo.git.merge("--ff-only", "-q", "updates")
+    repo.git.branch("-d", "updates")
 
 
 def _copy_files(origin: Path, dest: Path, glob: str) -> None:
@@ -468,16 +473,20 @@ def conert_with_prep(ctx, origin, dest):
 
     ctx.invoke(checkout, path=origin_dir, branch=origin_branch)
     ctx.invoke(checkout, path=dest_dir, branch=dest_branch, orphan=True)
+
+    # configure packit
+    ctx.invoke(add_packit_config, dest=Path(dest_dir))
+    ctx.invoke(copy_spec, origin=origin_dir, dest=dest_dir)
+    ctx.invoke(stage, gitdir=dest_dir, add="SPECS")
+    ctx.invoke(commit, m="Add spec-file for the distribution", gitdir=dest_dir)
+
+    # expand dist-git and pull the history
     ctx.invoke(get_archive, gitdir=origin_dir)
     ctx.invoke(run_prep, path=origin_dir)
     ctx.invoke(commit_all, path=origin_dir)
     ctx.invoke(
         pull_branch, source_dir=origin_dir, dest_dir=dest_dir, dest_branch=dest_branch
     )
-    ctx.invoke(copy_spec, origin=origin_dir, dest=dest_dir)
-    ctx.invoke(stage, gitdir=dest_dir, add="SPECS")
-    ctx.invoke(commit, m="Add spec-file for the distribution", gitdir=dest_dir)
-    ctx.invoke(add_packit_config, dest=Path(dest_dir))
 
 
 if __name__ == "__main__":
