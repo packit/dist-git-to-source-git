@@ -453,12 +453,23 @@ def convert(ctx, origin, dest):
     ctx.invoke(apply_patches, gitdir=dest_dir)
 
 
+@cli.command("create-tag")
+@click.argument("tag", type=click.STRING)
+@click.argument("path", type=click.Path(exists=True, file_okay=False))
+@click.argument("branch", type=click.STRING)
+@log_call
+def create_tag(tag, path, branch):
+    repo = git.Repo(path)
+    n = sum(1 for commit in repo.iter_commits(branch)) - 3
+    repo.create_tag(tag, ref=f"{branch}~{n}")
+
+
 @cli.command("convert-with-prep")
 @click.argument("origin", type=click.STRING)
 @click.argument("dest", type=click.STRING)
 @log_call
 @click.pass_context
-def conert_with_prep(ctx, origin, dest):
+def convert_with_prep(ctx, origin, dest):
     """Convert a dist-git repository into a source-git repository, using
     'rpmbuild' and executing the "%prep" stage from the spec file.
 
@@ -487,6 +498,7 @@ def conert_with_prep(ctx, origin, dest):
     ctx.invoke(
         pull_branch, source_dir=origin_dir, dest_dir=dest_dir, dest_branch=dest_branch
     )
+    ctx.invoke(create_tag, tag=START_TAG, path=dest_dir, branch=dest_branch)
 
 
 if __name__ == "__main__":
