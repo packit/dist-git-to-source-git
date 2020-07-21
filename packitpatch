@@ -6,7 +6,21 @@ set -eu
 # sequentially count the patches here.
 PATCHNUM=1
 [ -f /tmp/patchnum ] && PATCHNUM=$(cat /tmp/patchnum)
-cat - | /usr/bin/patch $@
-git add .
-git commit -m "Apply patch #$PATCHNUM"
+
+patch_file=$(mktemp)
+cat - > "$patch_file"
+
+set +e
+# Ignore all the flags unknown to git am
+git_am_options=$(getopt -o qp: -- $@)
+cat "$patch_file" | /usr/bin/git am $git_am_options
+git_am_exit_code=$?
+set -e
+
+if [ $git_am_exit_code -ne 0 ]; then
+    cat "$patch_file" | /usr/bin/patch $@
+    git add .
+    git commit -m "Apply patch #$PATCHNUM"
+fi
+
 echo $((PATCHNUM+1)) > /tmp/patchnum
