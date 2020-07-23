@@ -121,6 +121,58 @@ Or breaking it down:
     $ dist2src copy-patches rpms/rpm src/rpm
     $ dist2src apply-patches src/rpm
 
-[How to source-git?]: https://packit.dev/docs/how-to-source-git
+## Using `rpmbuild -bp` to generate source-git repositories
+
+`convert-with-prep` is a slightly different approach than the original
+one as instead of parsing the SPEC-file to apply the patches it relies on
+`rpmbuild -bp` to run the `%prep` stage from the spec file which results
+in a directory containing the unpacked sources (under `./BUILD/*`).
+
+With the following RPM-macro tweaks this directory can be turned into a Git
+repository from where the script can pull the history resulting from the
+conversion:
+
+- `__scm` is always `git`—this way all `%autosetup` macros will result in a
+  Git repository, even the ones which are missing the `-S git[_am]` flag.
+- SPEC-files which use `%setup` are modified before the conversion to use
+  `%gitsetup` instead. `%gitsetup` is a [custom macro](macros.packit), which
+  makes the `%prep` section to be executed similar to how `%autosetup` would
+  do: initializes a Git repository and applies the patches [as Git
+  commits](packitpatch). Currently it will also create a "various changes"
+  commit to capture any modification of the exploded sources which happens
+  additionally to applying the patches.
+
+## Converting in a CentOS environment
+
+In order to correctly evaluate the macros up to the `%prep` section, the right
+target environment has to be used. This is achieved by running the conversion
+script in a container, built to match the target environment. By default this
+is CentOS 8.
+
+This is currently working only if converting with `convert-with-prep`.
+
+To build the image, run:
+
+```
+$ podman build \
+    [--build-arg base_image=centos:8] \
+    [--build-arg package_manager="yum -y"]  \
+    -t dist2src .
+```
+
+The build arguments are optional, the defaults being `centos:8` and `yum -y`.
+
+To run the conversion:
+
+```
+podman run --rm -v $PWD:/workdir:z \
+    dist2src convert-with-prep rpms/<package>:<branch> source-git/<package>:<pranch>
+```
+
+Where the current working directory has the package cloned in an `rpms`
+sub-directory and the resulting source-git repo is going to be stored in
+`source-git`.
+
+[How to source-git?]: https://packit.dev/docs/source-git/how-to-source-git/
 [`get_sources.sh`]: https://wiki.centos.org/Sources#get_sources.sh_script
 [rebase-helper's `get_applied_patches()`]: https://github.com/rebase-helper/rebase-helper/blob/e98f4f6b14e2ca2e8cbb8a8fbeb6935e5d0cf289/rebasehelper/specfile.py#L351

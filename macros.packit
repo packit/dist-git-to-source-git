@@ -1,0 +1,6 @@
+# This is almost the same as %autosetup: runs %setup then %__scm_setup_* and
+# defines __patch as a custom script.
+%gitsetup(a:b:cDn:Tq)\
+%setup %{-a} %{-b} %{-c} %{-D} %{-n} %{-T} %{-q}\
+%global __patch /usr/bin/packitpatch\
+%{expand:%__scm_setup_%{__scm} %{!-q:-v}}
