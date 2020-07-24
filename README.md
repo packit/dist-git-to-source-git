@@ -10,7 +10,7 @@ need to be done differently.
 
 Here are the steps:
 
-*Note:* things bellow were done on git.centos.org/rpms/rpm.
+_Note:_ things bellow were done on git.centos.org/rpms/rpm.
 
 1. Fetch the sources from the lookaside cache.
 
@@ -46,7 +46,6 @@ What should happen when sources in dist-git are updated? Currently we will
 recreate the source-git branch.
 
 What should happen when the spec file or the patches in dist-git are updated?
-
 
 ## Usage
 
@@ -173,6 +172,6 @@ Where the current working directory has the package cloned in an `rpms`
 sub-directory and the resulting source-git repo is going to be stored in
 `source-git`.
 
-[How to source-git?]: https://packit.dev/docs/source-git/how-to-source-git/
+[how to source-git?]: https://packit.dev/docs/source-git/how-to-source-git/
 [`get_sources.sh`]: https://wiki.centos.org/Sources#get_sources.sh_script
 [rebase-helper's `get_applied_patches()`]: https://github.com/rebase-helper/rebase-helper/blob/e98f4f6b14e2ca2e8cbb8a8fbeb6935e5d0cf289/rebasehelper/specfile.py#L351
