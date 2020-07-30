@@ -10,6 +10,7 @@ import re
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import click
 import git
@@ -32,6 +33,44 @@ logger = logging.getLogger(__name__)
 # build/test
 TARGETS = ["centos-stream-x86_64"]
 START_TAG = "sg-start"
+
+
+POST_CLONE_HOOK = "post-clone"
+AFTER_PREP_HOOK = "after-prep"
+
+# would be better to have them externally (in a file at least)
+# but since this is only for kernel, it should be good enough
+KERNEL_DEBRAND_PATCH_MESSAGE = """\
+Debranding CPU patch
+
+present_in_specfile: true
+location_in_specfile: 1000
+patch_name: debrand-single-cpu.patch
+"""
+HOOKS = {
+    "kernel": {
+        # %setup -c creates another directory level but patches don't expect it
+        AFTER_PREP_HOOK: (
+            "set -e; "
+            "shopt -s dotglob nullglob && "  # so that * would match dotfiles as well
+            "cd BUILD/kernel-4.18.0-*.el8/ && "
+            "mv ./linux-4.18.0-*.el8.x86_64/* . && "
+            "rmdir ./linux-4.18.0-*.el8.x86_64 && "
+            "git add . && "
+            "git commit --amend --no-edit"
+            # the patch is already applied in %prep
+            # "git apply ../../SOURCES/debrand-single-cpu.patch &&"
+            # f"git commit -a -m '{KERNEL_DEBRAND_PATCH_MESSAGE}'"
+        )
+    }
+}
+
+
+def get_hook(source_git_path: Path, hook_name: str) -> Optional[str]:
+    """ get a hook's command for particular source-git repo """
+    package_name = source_git_path.name
+    return HOOKS.get(package_name, {}).get(hook_name, None)
+
 
 
 @click.group("dist2src")
@@ -172,6 +211,11 @@ def run_prep(path):
             for line in e.stderr.splitlines():
                 logger.debug(str(line))
             raise
+
+        hook_cmd = get_hook(Path(path), AFTER_PREP_HOOK)
+        if hook_cmd:
+            bash = sh.Command("bash")
+            bash("-c", hook_cmd)
 
     return stdout
 
