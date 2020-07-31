@@ -212,6 +212,9 @@ def run_prep(path):
                 logger.debug(str(line))
             raise
 
+        repo = git.Repo(cwd)
+        repo.git.checkout("--", "SPECS/")
+
         hook_cmd = get_hook(Path(path), AFTER_PREP_HOOK)
         if hook_cmd:
             bash = sh.Command("bash")
