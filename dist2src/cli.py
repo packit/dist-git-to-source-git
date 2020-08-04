@@ -10,11 +10,13 @@ import re
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import click
 import git
 import sh
 import timeout_decorator
+from gitdb.exc import BadName
 from rebasehelper.specfile import SpecFile
 from yaml import dump
 
@@ -32,6 +34,43 @@ logger = logging.getLogger(__name__)
 # build/test
 TARGETS = ["centos-stream-x86_64"]
 START_TAG = "sg-start"
+
+
+POST_CLONE_HOOK = "post-clone"
+AFTER_PREP_HOOK = "after-prep"
+
+# would be better to have them externally (in a file at least)
+# but since this is only for kernel, it should be good enough
+KERNEL_DEBRAND_PATCH_MESSAGE = """\
+Debranding CPU patch
+
+present_in_specfile: true
+location_in_specfile: 1000
+patch_name: debrand-single-cpu.patch
+"""
+HOOKS = {
+    "kernel": {
+        # %setup -c creates another directory level but patches don't expect it
+        AFTER_PREP_HOOK: (
+            "set -e; "
+            "shopt -s dotglob nullglob && "  # so that * would match dotfiles as well
+            "cd BUILD/kernel-4.18.0-*.el8/ && "
+            "mv ./linux-4.18.0-*.el8.x86_64/* . && "
+            "rmdir ./linux-4.18.0-*.el8.x86_64 && "
+            "git add . && "
+            "git commit --amend --no-edit"
+            # the patch is already applied in %prep
+            # "git apply ../../SOURCES/debrand-single-cpu.patch &&"
+            # f"git commit -a -m '{KERNEL_DEBRAND_PATCH_MESSAGE}'"
+        )
+    }
+}
+
+
+def get_hook(source_git_path: Path, hook_name: str) -> Optional[str]:
+    """ get a hook's command for particular source-git repo """
+    package_name = source_git_path.name
+    return HOOKS.get(package_name, {}).get(hook_name, None)
 
 
 @click.group("dist2src")
@@ -173,6 +212,14 @@ def run_prep(path):
                 logger.debug(str(line))
             raise
 
+        repo = git.Repo(cwd)
+        repo.git.checkout("--", "SPECS/")
+
+        hook_cmd = get_hook(Path(path), AFTER_PREP_HOOK)
+        if hook_cmd:
+            bash = sh.Command("bash")
+            bash("-c", hook_cmd)
+
     return stdout
 
 
@@ -232,13 +279,25 @@ def pull_branch(source_dir, dest_dir, dest_branch):
     repo.git.branch("-d", "updates")
 
 
-def _copy_files(origin: Path, dest: Path, glob: str) -> None:
+def _copy_files(
+    origin: Path,
+    dest: Path,
+    glob: str,
+    ignore_tarballs: bool = False,
+    ignore_patches: bool = False,
+) -> None:
     """
     Copy all glob files from origin to dest
     """
     dest.mkdir(parents=True, exist_ok=True)
 
     for file_ in origin.glob(glob):
+        if ignore_tarballs and file_.name.endswith((".tar.gz", ".tar.xz", ".tar.bz2")):
+            logger.debug(f"ignoring source file {file_}")
+            continue
+        if ignore_patches and file_.name.endswith(".patch"):
+            logger.debug(f"ignoring source file {file_}")
+            continue
         shutil.copy2(file_, dest / file_.name)
 
 
@@ -259,7 +318,13 @@ def copy_spec(ctx, origin, dest):
 @click.pass_context
 def copy_all_sources(ctx, origin, dest):
     """Copy 'SOURCES/*' from a dist-git repo to a source-git repo."""
-    _copy_files(origin=origin / "SOURCES", dest=dest / "SPECS", glob="*")
+    _copy_files(
+        origin=Path(origin) / "SOURCES",
+        dest=Path(dest) / "SPECS",
+        glob="*",
+        ignore_tarballs=True,
+        ignore_patches=True,
+    )
 
 
 @cli.command()
@@ -412,6 +477,18 @@ def apply_patches(ctx, remove_patches, gitdir):
 def commit(gitdir, m):
     """Commit staged changes in GITDIR."""
     repo = git.Repo(gitdir)
+    try:
+        # I'd love to use repo.index.entries but it just doesn't correspond
+        # to actual index/staging area, it looks like working tree actually
+        # instead we just check if there is something in index by doing diff w/ HEAD
+        diff = repo.index.diff(other="HEAD")
+    except BadName as ex:
+        # the repo is empty and there is no HEAD, not an error
+        logger.debug(f"can't diff index and HEAD: {ex}")
+        diff = True
+    if not diff:
+        logger.info("Nothing to commit, aborting commit process.")
+        return
     repo.git.commit(m=m)
 
 
@@ -493,6 +570,10 @@ def convert_with_prep(ctx, origin, dest):
     ctx.invoke(copy_spec, origin=origin_dir, dest=dest_dir)
     ctx.invoke(stage, gitdir=dest_dir, add="SPECS")
     ctx.invoke(commit, m="Add spec-file for the distribution", gitdir=dest_dir)
+
+    ctx.invoke(copy_all_sources, origin=origin_dir, dest=dest_dir)
+    ctx.invoke(stage, gitdir=dest_dir, add="SPECS")
+    ctx.invoke(commit, m="Add sources defined in the spec file", gitdir=dest_dir)
 
     # expand dist-git and pull the history
     ctx.invoke(get_archive, gitdir=origin_dir)

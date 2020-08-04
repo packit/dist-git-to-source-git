@@ -6,6 +6,7 @@
 PACKAGE ?= rpm
 BRANCH ?= c8s
 DIR ?= git.centos.org
+IMAGE_NAME := dist2src
 
 usage:
 	@echo "Run 'make convert' to run the convert or 'make clean' to clean up things."
@@ -27,3 +28,9 @@ convert: clean
 
 clean:
 	rm -rf $(DIR)/
+
+build:
+	sudo podman build -t $(IMAGE_NAME) .
+
+run:
+	sudo podman run -ti -v $(CURDIR)/dist2src:/usr/local/lib/python3.6/site-packages/dist2src:Z --entrypoint= $(OPTS) $(IMAGE_NAME) /bin/bash

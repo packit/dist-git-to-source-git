@@ -165,7 +165,7 @@ To run the conversion:
 
 ```
 podman run --rm -v $PWD:/workdir:z \
-    dist2src convert-with-prep rpms/<package>:<branch> source-git/<package>:<pranch>
+    dist2src convert-with-prep rpms/<package>:<branch> source-git/<package>:<branch>
 ```
 
 Where the current working directory has the package cloned in an `rpms`
