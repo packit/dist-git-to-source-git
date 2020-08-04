@@ -176,6 +176,29 @@ def get_archive(gitdir):
     return stdout
 
 
+class D2SSpecFile(SpecFile):
+    """ add a way to comment patches out in a spec file """
+
+    def comment_patches(self):
+        applied_patches = self.get_applied_patches()
+        patch_indices = [p.index for p in applied_patches]
+
+        pattern = re.compile(r"^Patch(?P<index>\d+)\s*:.+$")
+        package = self.spec_content.section("%package")
+        for i, line in enumerate(package):
+            match = pattern.match(line)
+            if match:
+                index = int(match.group("index"))
+                if index in patch_indices:
+                    logger.debug(f"Commenting patch {index}")
+                    package[i] = f"# {line}"
+        self.spec_content.replace_section("%package", package)
+
+        # comment out all %patch in %prep
+        self._process_patches(patch_indices)
+        self.save()
+
+
 @cli.command()
 @click.argument("path", type=click.Path(exists=True, file_okay=False))
 @log_call
@@ -445,33 +468,16 @@ def apply_patches(ctx, remove_patches, gitdir):
     'centos-packaging' directory.
     """
 
-    class Specfile(SpecFile):
-        def comment_patches(self, patch_indexes):
-            pattern = re.compile(r"^Patch(?P<index>\d+)\s*:.+$")
-            package = self.spec_content.section("%package")
-            for i, line in enumerate(package):
-                match = pattern.match(line)
-                if match:
-                    index = int(match.group("index"))
-                    if index in patch_indexes:
-                        logger.debug(f"Commenting patch {index}")
-                        package[i] = f"# {line}"
-            self.spec_content.replace_section("%package", package)
-
     specdir = Path(gitdir, "SPECS")
     specpath = specdir / get_local_specfile_path(specdir)
     logger.info(f"specpath = {specpath}")
-    specfile = Specfile(specpath, sources_location=str(Path(gitdir, "SPECS")),)
+    specfile = D2SSpecFile(specpath, sources_location=str(Path(gitdir, "SPECS")),)
     repo = git.Repo(gitdir)
     applied_patches = specfile.get_applied_patches()
 
     if remove_patches:
-        patch_indices = [p.index for p in applied_patches]
         # comment out all Patch in %package
-        specfile.comment_patches(patch_indices)
-        # comment out all %patch in %prep
-        specfile._process_patches(patch_indices)
-        specfile.save()
+        specfile.comment_patches()
         repo.git.add(specpath.relative_to(gitdir))
         repo.git.commit(m="Downstream spec with commented patches", allow_empty=True)
 
@@ -576,8 +582,29 @@ def create_tag(tag, path, branch):
     """Create a Git TAG at the tip of BRANCH
     """
     repo = git.Repo(path)
-    repo.git.checkout(branch)
-    repo.create_tag(tag)
+    repo.create_tag(tag, ref=branch)
+
+
+@cli.command("comment-out-patches")
+@click.argument("source-git-dir", type=click.Path(exists=True, file_okay=False))
+@click.argument("absolute-sources-path", type=click.STRING)
+@log_call
+def comment_out_patches(source_git_dir, absolute_sources_path):
+    """
+    Comment out patches in the provided specfile
+
+    source-git-dir - absolute path to the source-git repository
+    specfile-path - relative path to the spec within the repo
+    absolute-sources-path - path to sources ( = patches)
+    """
+    s = Path(source_git_dir)
+    specfile_path = next(s.glob("SPECS/*.spec"))
+    specfile = D2SSpecFile(str(specfile_path), sources_location=absolute_sources_path)
+    if specfile.get_applied_patches():
+        specfile.comment_patches()
+        repo = git.Repo(source_git_dir)
+        repo.git.add(specfile_path.relative_to(s))
+        repo.git.commit(m="Comment out patches in spec so packit can process them")
 
 
 @cli.command("convert-with-prep")
@@ -617,6 +644,11 @@ def convert_with_prep(ctx, origin, dest):
     ctx.invoke(copy_spec, origin=origin_dir, dest=dest_dir)
     ctx.invoke(stage, gitdir=dest_dir, add="SPECS")
     ctx.invoke(commit, m="Add spec-file for the distribution", gitdir=dest_dir)
+    ctx.invoke(
+        comment_out_patches,
+        source_git_dir=dest_dir,
+        absolute_sources_path=str(Path(origin_dir, "SOURCES")),
+    )
 
     ctx.invoke(copy_all_sources, origin=origin_dir, dest=dest_dir)
     ctx.invoke(stage, gitdir=dest_dir, add="SPECS")
