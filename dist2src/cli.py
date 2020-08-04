@@ -213,6 +213,7 @@ def run_prep(path):
             raise
 
         repo = git.Repo(cwd)
+        # let's revert the spec change in dist-git
         repo.git.checkout("--", "SPECS/")
 
         hook_cmd = get_hook(Path(path), AFTER_PREP_HOOK)
