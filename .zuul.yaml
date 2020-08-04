@@ -1,6 +1,5 @@
 ---
 - project:
-    name: packit-service/dist-git-to-source-git
     check:
       jobs:
         - pre-commit
