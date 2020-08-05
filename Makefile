@@ -7,6 +7,7 @@ PACKAGE ?= rpm
 BRANCH ?= c8s
 DIR ?= git.centos.org
 IMAGE_NAME := dist2src
+CONTAINER_ENGINE ?= $(shell command -v podman 2> /dev/null || echo docker)
 
 usage:
 	@echo "Run 'make convert' to run the convert or 'make clean' to clean up things."
@@ -30,7 +31,7 @@ clean:
 	rm -rf $(DIR)/
 
 build:
-	sudo podman build -t $(IMAGE_NAME) .
+	$(CONTAINER_ENGINE) build -t $(IMAGE_NAME) .
 
 run:
-	sudo podman run -ti -v $(CURDIR)/dist2src:/usr/local/lib/python3.6/site-packages/dist2src:Z --entrypoint= $(OPTS) $(IMAGE_NAME) /bin/bash
+	$(CONTAINER_ENGINE) run -ti -v $(CURDIR)/dist2src:/usr/local/lib/python3.6/site-packages/dist2src:Z --entrypoint= $(OPTS) $(IMAGE_NAME) /bin/bash
