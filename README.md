@@ -175,3 +175,14 @@ sub-directory and the resulting source-git repo is going to be stored in
 [how to source-git?]: https://packit.dev/docs/source-git/how-to-source-git/
 [`get_sources.sh`]: https://wiki.centos.org/Sources#get_sources.sh_script
 [rebase-helper's `get_applied_patches()`]: https://github.com/rebase-helper/rebase-helper/blob/e98f4f6b14e2ca2e8cbb8a8fbeb6935e5d0cf289/rebasehelper/specfile.py#L351
+
+## Tests
+
+You can find functional tests which convert real dist-git packages. They
+require setup in your environment:
+
+- Build an image with the dist2src inside (`make build`) -- you can override
+  container engine of your choice with env var `CONTAINER_ENGINE` (hint, root
+  podman has better performance than rootless, so `CONTAINER_ENGINE="sudo podman"`).
+- Have mock installed and set up -- last step of the testing is to build the
+  generated SRPM from a source-git repo using `mock --rebuild -r centos-stream-x86_64`).
