@@ -254,9 +254,9 @@ def commit_all(ctx, path):
 @click.argument("dest_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("dest_branch", type=click.STRING)
 @log_call
-def pull_branch(source_dir, dest_dir, dest_branch):
-    """Pull the branch produced by 'rpmbuild -bp' and rebase
-    it on top of DEST_BRANCH.
+def fetch_branch(source_dir, dest_dir, dest_branch):
+    """Fetch the branch produced by 'rpmbuild -bp' from the dist-git
+    repo to the source-git repo.
 
     SOURCE_DIR is a dist-git repository, in which there is a 'BUILD'
     subdirectory, having a single subdirectory, which is a Git repository
@@ -264,19 +264,52 @@ def pull_branch(source_dir, dest_dir, dest_branch):
 
     DEST_DIR is an already initialized source-git repository.
 
-    DEST_BRANCH is the branch on which the history should be pulled.
+    DEST_BRANCH is the branch to which the history should be fetched.
     """
     # Make it absolute, so that it's easier to use it with 'fetch'
     # running from dest_dir
     source_git_repo = get_build_dir(Path(source_dir)).absolute()
 
     repo = git.Repo(dest_dir)
-    repo.git.fetch(source_git_repo, "+master:updates")
-    repo.git.checkout("updates")
-    repo.git.rebase("--root", "--onto", f"{dest_branch}")
-    repo.git.checkout(f"{dest_branch}")
-    repo.git.merge("--ff-only", "-q", "updates")
-    repo.git.branch("-d", "updates")
+    repo.git.fetch(source_git_repo, f"+master:{dest_branch}")
+
+
+@cli.command()
+@click.argument("gitdir", type=click.Path(exists=True, file_okay=False))
+@click.argument("from_branch", type=click.STRING)
+@click.argument("to_branch", type=click.STRING)
+@log_call
+def cherry_pick_base(gitdir, from_branch, to_branch):
+    """Cherry-pick the first commit of a branch
+
+    Cherry-pick the first commit of FROM_BRANCH to TO_BRANCH in the
+    repository stored in GITDIR.
+    """
+    repo = git.Repo(gitdir)
+    num_commits = sum(1 for commit in repo.iter_commits(from_branch))
+    repo.git.checkout("-B", to_branch)
+    repo.git.cherry_pick(f"{from_branch}~{num_commits - 1}")
+
+
+@cli.command()
+@click.argument("gitdir", type=click.Path(exists=True, file_okay=False))
+@click.argument("from_branch", type=click.STRING)
+@click.argument("to_branch", type=click.STRING)
+@log_call
+def rebase_patches(gitdir, from_branch, to_branch):
+    """Rebase FROM_BRANCH to TO_BRANCH
+
+    With this commits corresponding to patches can be transferred to
+    the TO_BRANCH.
+
+    FROM_BRANCH is cleaned up (deleted).
+    """
+    repo = git.Repo(gitdir)
+    repo.git.checkout(from_branch)
+    repo.git.rebase("--root", "--onto", to_branch)
+    repo.git.checkout(to_branch)
+    repo.git.merge("--ff-only", "-q", from_branch)
+    repo.git.branch("-d", from_branch)
 
 
 def _copy_files(
@@ -539,9 +572,11 @@ def convert(ctx, origin, dest):
 @click.argument("branch", type=click.STRING)
 @log_call
 def create_tag(tag, path, branch):
+    """Create a Git TAG at the tip of BRANCH
+    """
     repo = git.Repo(path)
-    n = sum(1 for commit in repo.iter_commits(branch)) - 3
-    repo.create_tag(tag, ref=f"{branch}~{n}")
+    repo.git.checkout(branch)
+    repo.create_tag(tag)
 
 
 @cli.command("convert-with-prep")
@@ -565,6 +600,17 @@ def convert_with_prep(ctx, origin, dest):
     ctx.invoke(checkout, path=origin_dir, branch=origin_branch)
     ctx.invoke(checkout, path=dest_dir, branch=dest_branch, orphan=True)
 
+    # expand dist-git and pull the history
+    ctx.invoke(get_archive, gitdir=origin_dir)
+    ctx.invoke(run_prep, path=origin_dir)
+    ctx.invoke(commit_all, path=origin_dir)
+    ctx.invoke(
+        fetch_branch, source_dir=origin_dir, dest_dir=dest_dir, dest_branch="updates"
+    )
+    ctx.invoke(
+        cherry_pick_base, gitdir=dest_dir, from_branch="updates", to_branch=dest_branch
+    )
+
     # configure packit
     ctx.invoke(add_packit_config, dest=Path(dest_dir))
     ctx.invoke(copy_spec, origin=origin_dir, dest=dest_dir)
@@ -575,14 +621,13 @@ def convert_with_prep(ctx, origin, dest):
     ctx.invoke(stage, gitdir=dest_dir, add="SPECS")
     ctx.invoke(commit, m="Add sources defined in the spec file", gitdir=dest_dir)
 
-    # expand dist-git and pull the history
-    ctx.invoke(get_archive, gitdir=origin_dir)
-    ctx.invoke(run_prep, path=origin_dir)
-    ctx.invoke(commit_all, path=origin_dir)
-    ctx.invoke(
-        pull_branch, source_dir=origin_dir, dest_dir=dest_dir, dest_branch=dest_branch
-    )
+    # mark the last upstream commit
     ctx.invoke(create_tag, tag=START_TAG, path=dest_dir, branch=dest_branch)
+
+    # get all the patch-commits
+    ctx.invoke(
+        rebase_patches, gitdir=dest_dir, from_branch="updates", to_branch=dest_branch
+    )
 
 
 if __name__ == "__main__":
