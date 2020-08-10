@@ -1,9 +1,26 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
-#
-# This is almost the same as %autosetup: runs %setup then %__scm_setup_* and
-# defines __patch as a custom script.
-%gitsetup(a:b:cDn:Tq)\
-%setup %{-a} %{-b} %{-c} %{-D} %{-n} %{-T} %{-q}\
-%global __patch /usr/bin/packitpatch\
-%{expand:%__scm_setup_%{__scm} %{!-q:-v}}
+
+# we want both: here and in packitpatch
+# if there are no patches, packitpatch never gets invoked and this will b/c of autosetup
+%__scm_setup_patch(q)\
+%{__git} init\
+%{__git} add .\
+%{__git} commit --allow-empty -a -m "%{NAME}-%{VERSION} base"
+
+# %{1} = absolute path to the patch
+# %{2} = patch ID
+%__scm_apply_patch(qp:m:)\
+/usr/bin/packitpatch %{1} %{2} %{-p:-p%{-p*}} %{-q:-s} --fuzz=%{_default_patch_fuzz} %{_default_patch_flags}
+
+%__scm_setup_git(q)\
+%{__git} init %{-q}\
+%{__git} add .\
+%{__git} commit %{-q} --allow-empty -a -m "%{NAME}-%{VERSION} base"
+
+%__scm_apply_git_am(qp:m:)\
+%{__git} am %{-q} %{-p:-p%{-p*}}\
+patch_name=`basename %{1}`\
+commit_msg=`%{__git} log --format=%B -n1`\
+metadata_commit_msg=`printf "patch_name: $patch_name\\npresent_in_specfile: true\\nlocation_in_specfile: %{2}\\nsquash_commits: true"`\
+%{__git} commit --amend -m "$commit_msg" -m "$metadata_commit_msg"

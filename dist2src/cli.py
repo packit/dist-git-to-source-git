@@ -221,21 +221,13 @@ def run_prep(ctx, path):
         cwd = Path.cwd()
         logger.debug(f"Running rpmbuild in {cwd}")
         specfile_path = Path(f"SPECS/{cwd.name}.spec")
-        setup = re.compile("^%setup ", re.MULTILINE)
-        spec = specfile_path.read_text()
-        spec, number_of_subs = setup.subn("%gitsetup ", spec)
-        if number_of_subs > 1:
-            raise RuntimeError("Wow! Multiple %setup macros in the spec file!")
-        if number_of_subs:
-            specfile_path.write_text(spec)
+
         try:
             running_cmd = rpmbuild(
                 "--nodeps",
                 "-vv" if ctx.obj[VERBOSE_KEY] else "",
                 "--define",
                 f"_topdir {cwd}",
-                "--define",
-                "__scm git",
                 "-bp",
                 specfile_path,
             )
@@ -246,10 +238,6 @@ def run_prep(ctx, path):
 
         logger.debug(running_cmd)  # this will print stdout
         logger.debug(running_cmd.stderr.decode())
-
-        repo = git.Repo(cwd)
-        # let's revert the spec change in dist-git
-        repo.git.checkout("--", "SPECS/")
 
         hook_cmd = get_hook(Path(path), AFTER_PREP_HOOK)
         if hook_cmd:
@@ -656,11 +644,6 @@ def convert_with_prep(ctx, origin, dest):
     ctx.invoke(copy_spec, origin=origin_dir, dest=dest_dir)
     ctx.invoke(stage, gitdir=dest_dir, add="SPECS")
     ctx.invoke(commit, m="Add spec-file for the distribution", gitdir=dest_dir)
-    ctx.invoke(
-        comment_out_patches,
-        source_git_dir=dest_dir,
-        absolute_sources_path=str(Path(origin_dir, "SOURCES")),
-    )
 
     ctx.invoke(copy_all_sources, origin=origin_dir, dest=dest_dir)
     ctx.invoke(stage, gitdir=dest_dir, add="SPECS")
