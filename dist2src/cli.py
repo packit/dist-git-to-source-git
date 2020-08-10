@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 TARGETS = ["centos-stream-x86_64"]
 START_TAG = "sg-start"
 
+VERBOSE_KEY = "VERBOSE"
 
 POST_CLONE_HOOK = "post-clone"
 AFTER_PREP_HOOK = "after-prep"
@@ -77,7 +78,8 @@ def get_hook(source_git_path: Path, hook_name: str) -> Optional[str]:
 @click.option(
     "-v", "--verbose", count=True, help="Increase verbosity. Repeat to log more."
 )
-def cli(verbose):
+@click.pass_context
+def cli(ctx, verbose):
     """Script to convert the tip of a branch from a dist-git repository
     into a commit on a branch in a source-git repository.
 
@@ -105,6 +107,11 @@ def cli(verbose):
         $ dist2src copy-all-sources rpms/rpm src/rpm
         $ dist2src apply-patches src/rpm
     """
+    # https://click.palletsprojects.com/en/7.x/commands/#nested-handling-and-contexts
+    # ensure that ctx.obj exists and is a dict (in case `cli()` is called
+    # by means other than the `if` block below)
+    ctx.ensure_object(dict)
+    ctx.obj[VERBOSE_KEY] = verbose
     logger.addHandler(logging.StreamHandler())
     if verbose > 1:
         logger.setLevel(logging.DEBUG)
@@ -202,7 +209,8 @@ class D2SSpecFile(SpecFile):
 @cli.command()
 @click.argument("path", type=click.Path(exists=True, file_okay=False))
 @log_call
-def run_prep(path):
+@click.pass_context
+def run_prep(ctx, path):
     """Run `rpmbuild -bp` in GITDIR.
 
     PATH needs to be a dist-git repository.
@@ -221,8 +229,9 @@ def run_prep(path):
         if number_of_subs:
             specfile_path.write_text(spec)
         try:
-            stdout = rpmbuild(
+            running_cmd = rpmbuild(
                 "--nodeps",
+                "-vv" if ctx.obj[VERBOSE_KEY] else "",
                 "--define",
                 f"_topdir {cwd}",
                 "--define",
@@ -235,6 +244,9 @@ def run_prep(path):
                 logger.debug(str(line))
             raise
 
+        logger.debug(running_cmd)  # this will print stdout
+        logger.debug(running_cmd.stderr.decode())
+
         repo = git.Repo(cwd)
         # let's revert the spec change in dist-git
         repo.git.checkout("--", "SPECS/")
@@ -244,7 +256,7 @@ def run_prep(path):
             bash = sh.Command("bash")
             bash("-c", hook_cmd)
 
-    return stdout
+    return running_cmd.stdout  # why do we return here?
 
 
 def get_build_dir(path: Path):
