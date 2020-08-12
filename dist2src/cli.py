@@ -10,7 +10,7 @@ import re
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 import click
 import git
@@ -39,6 +39,7 @@ VERBOSE_KEY = "VERBOSE"
 
 POST_CLONE_HOOK = "post-clone"
 AFTER_PREP_HOOK = "after-prep"
+INCLUDE_SOURCES = "include-files"
 
 # would be better to have them externally (in a file at least)
 # but since this is only for kernel, it should be good enough
@@ -49,7 +50,7 @@ present_in_specfile: true
 location_in_specfile: 1000
 patch_name: debrand-single-cpu.patch
 """
-HOOKS = {
+HOOKS: Dict[str, Dict[str, Any]] = {
     "kernel": {
         # %setup -c creates another directory level but patches don't expect it
         AFTER_PREP_HOOK: (
@@ -64,7 +65,8 @@ HOOKS = {
             # "git apply ../../SOURCES/debrand-single-cpu.patch &&"
             # f"git commit -a -m '{KERNEL_DEBRAND_PATCH_MESSAGE}'"
         )
-    }
+    },
+    "pacemaker": {INCLUDE_SOURCES: ["nagios-agents-metadata-*.tar.gz"]},
 }
 
 
@@ -342,20 +344,32 @@ def _copy_files(
     glob: str,
     ignore_tarballs: bool = False,
     ignore_patches: bool = False,
+    include_files: Optional[List[str]] = None,
 ) -> None:
     """
     Copy all glob files from origin to dest
     """
     dest.mkdir(parents=True, exist_ok=True)
 
-    for file_ in origin.glob(glob):
-        if ignore_tarballs and file_.name.endswith((".tar.gz", ".tar.xz", ".tar.bz2")):
-            logger.debug(f"ignoring source file {file_}")
-            continue
-        if ignore_patches and file_.name.endswith(".patch"):
-            logger.debug(f"ignoring source file {file_}")
-            continue
-        shutil.copy2(file_, dest / file_.name)
+    present_files = set(origin.glob(glob))
+    files_to_copy = set()
+
+    if include_files:
+        for i in include_files:
+            files_to_copy.update(set(origin.glob(i)))
+
+    if ignore_tarballs:
+        for e in ("*.tar.gz", "*.tar.xz", "*.tar.bz2"):
+            present_files.difference_update(set(origin.glob(e)))
+    if ignore_patches:
+        present_files.difference_update(set(origin.glob("*.patch")))
+
+    files_to_copy.update(present_files)
+
+    for file_ in files_to_copy:
+        file_dest = dest / file_.name
+        logger.debug(f"copying {file_} to {file_dest}")
+        shutil.copy2(file_, file_dest)
 
 
 @cli.command()
@@ -375,12 +389,14 @@ def copy_spec(ctx, origin, dest):
 @click.pass_context
 def copy_all_sources(ctx, origin, dest):
     """Copy 'SOURCES/*' from a dist-git repo to a source-git repo."""
+    include_files = get_hook(Path(dest), INCLUDE_SOURCES)
     _copy_files(
         origin=Path(origin) / "SOURCES",
         dest=Path(dest) / "SPECS",
         glob="*",
         ignore_tarballs=True,
         ignore_patches=True,
+        include_files=include_files,
     )
 
 
