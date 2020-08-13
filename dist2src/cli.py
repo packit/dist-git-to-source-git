@@ -16,7 +16,6 @@ import click
 import git
 import sh
 import timeout_decorator
-from gitdb.exc import BadName
 from rebasehelper.specfile import SpecFile
 from yaml import dump
 
@@ -542,19 +541,8 @@ def apply_patches(ctx, remove_patches, gitdir):
 def commit(gitdir, m):
     """Commit staged changes in GITDIR."""
     repo = git.Repo(gitdir)
-    try:
-        # I'd love to use repo.index.entries but it just doesn't correspond
-        # to actual index/staging area, it looks like working tree actually
-        # instead we just check if there is something in index by doing diff w/ HEAD
-        diff = repo.index.diff(other="HEAD")
-    except BadName as ex:
-        # the repo is empty and there is no HEAD, not an error
-        logger.debug(f"can't diff index and HEAD: {ex}")
-        diff = True
-    if not diff:
-        logger.info("Nothing to commit, aborting commit process.")
-        return
-    repo.git.commit(m=m)
+    # some of the commits may be empty and it's not an error, e.g. extra source files
+    repo.git.commit("--allow-empty", m=m)
 
 
 @cli.command()
