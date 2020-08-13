@@ -13,6 +13,8 @@ RUN $package_manager -y install \
     bison \
     flex \
     make \
+    autoconf \
+    automake \
     && $package_manager -y clean all \
     && pip3 install ipdb
 
