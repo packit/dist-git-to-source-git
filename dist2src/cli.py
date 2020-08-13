@@ -16,10 +16,9 @@ import click
 import git
 import sh
 import timeout_decorator
+from packit.config.package_config import get_local_specfile_path
 from rebasehelper.specfile import SpecFile
 from yaml import dump
-
-from packit.config.package_config import get_local_specfile_path
 
 # packitos currently requires python>=3.7, but CentOS 8 has python==3.6 by default.
 # Remove this once a version of packitos>0.13.1 is released.
@@ -126,7 +125,7 @@ def log_call(func):
         args_string = ", ".join([repr(a) for a in args])
         kwargs_string = ", ".join([f"{k}={v!r}" for k, v in kwargs.items()])
         sep = ", " if args_string and kwargs_string else ""
-        logger.debug(f"{func.__name__}({args_string}{sep}{kwargs_string})")
+        logger.info(f"{func.__name__}({args_string}{sep}{kwargs_string})")
         ret = func(*args, **kwargs)
         return ret
 
@@ -223,10 +222,13 @@ def run_prep(ctx, path):
         logger.debug(f"Running rpmbuild in {cwd}")
         specfile_path = Path(f"SPECS/{cwd.name}.spec")
 
+        verbosity_level = ""
+        if ctx.obj[VERBOSE_KEY]:  # -vv can be super-duper verbose
+            verbosity_level = "-" + "v" * ctx.obj[VERBOSE_KEY]
         try:
             running_cmd = rpmbuild(
                 "--nodeps",
-                "-vv" if ctx.obj[VERBOSE_KEY] else "",
+                verbosity_level,
                 "--define",
                 f"_topdir {cwd}",
                 "-bp",
