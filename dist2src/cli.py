@@ -322,7 +322,8 @@ def cherry_pick_base(gitdir, from_branch, to_branch):
 @click.argument("from_branch", type=click.STRING)
 @click.argument("to_branch", type=click.STRING)
 @log_call
-def rebase_patches(gitdir, from_branch, to_branch):
+@click.pass_context
+def rebase_patches(ctx, gitdir, from_branch, to_branch):
     """Rebase FROM_BRANCH to TO_BRANCH
 
     With this commits corresponding to patches can be transferred to
@@ -332,6 +333,14 @@ def rebase_patches(gitdir, from_branch, to_branch):
     """
     repo = git.Repo(gitdir)
     repo.git.checkout(from_branch)
+
+    if repo.head.commit.message == "Various changes\n":
+        repo.git.checkout(to_branch)
+        repo.git.cherry_pick(from_branch)
+        ctx.invoke(create_tag, tag=START_TAG, path=gitdir, branch=to_branch)
+        repo.git.checkout(from_branch)
+        repo.git.reset("--hard", "HEAD^")
+
     repo.git.rebase("--root", "--onto", to_branch)
     repo.git.checkout(to_branch)
     repo.git.merge("--ff-only", "-q", from_branch)
@@ -598,7 +607,7 @@ def create_tag(tag, path, branch):
     """Create a Git TAG at the tip of BRANCH
     """
     repo = git.Repo(path)
-    repo.create_tag(tag, ref=branch)
+    repo.create_tag(tag, ref=branch, force=True)
 
 
 @cli.command("comment-out-patches")
