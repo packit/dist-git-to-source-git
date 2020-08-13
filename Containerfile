@@ -13,7 +13,10 @@ RUN $package_manager -y install \
     bison \
     flex \
     make \
-    && $package_manager -y clean all
+    autoconf \
+    automake \
+    && $package_manager -y clean all \
+    && pip3 install ipdb
 
 
 RUN git config --system user.name "Packit" && git config --system user.email "packit"

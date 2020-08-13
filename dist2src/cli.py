@@ -10,17 +10,15 @@ import re
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 import click
 import git
 import sh
 import timeout_decorator
-from gitdb.exc import BadName
+from packit.config.package_config import get_local_specfile_path
 from rebasehelper.specfile import SpecFile
 from yaml import dump
-
-from packit.config.package_config import get_local_specfile_path
 
 # packitos currently requires python>=3.7, but CentOS 8 has python==3.6 by default.
 # Remove this once a version of packitos>0.13.1 is released.
@@ -35,9 +33,11 @@ logger = logging.getLogger(__name__)
 TARGETS = ["centos-stream-x86_64"]
 START_TAG = "sg-start"
 
+VERBOSE_KEY = "VERBOSE"
 
 POST_CLONE_HOOK = "post-clone"
 AFTER_PREP_HOOK = "after-prep"
+INCLUDE_SOURCES = "include-files"
 
 # would be better to have them externally (in a file at least)
 # but since this is only for kernel, it should be good enough
@@ -48,7 +48,7 @@ present_in_specfile: true
 location_in_specfile: 1000
 patch_name: debrand-single-cpu.patch
 """
-HOOKS = {
+HOOKS: Dict[str, Dict[str, Any]] = {
     "kernel": {
         # %setup -c creates another directory level but patches don't expect it
         AFTER_PREP_HOOK: (
@@ -63,7 +63,8 @@ HOOKS = {
             # "git apply ../../SOURCES/debrand-single-cpu.patch &&"
             # f"git commit -a -m '{KERNEL_DEBRAND_PATCH_MESSAGE}'"
         )
-    }
+    },
+    "pacemaker": {INCLUDE_SOURCES: ["nagios-agents-metadata-*.tar.gz"]},
 }
 
 
@@ -77,7 +78,8 @@ def get_hook(source_git_path: Path, hook_name: str) -> Optional[str]:
 @click.option(
     "-v", "--verbose", count=True, help="Increase verbosity. Repeat to log more."
 )
-def cli(verbose):
+@click.pass_context
+def cli(ctx, verbose):
     """Script to convert the tip of a branch from a dist-git repository
     into a commit on a branch in a source-git repository.
 
@@ -105,6 +107,11 @@ def cli(verbose):
         $ dist2src copy-all-sources rpms/rpm src/rpm
         $ dist2src apply-patches src/rpm
     """
+    # https://click.palletsprojects.com/en/7.x/commands/#nested-handling-and-contexts
+    # ensure that ctx.obj exists and is a dict (in case `cli()` is called
+    # by means other than the `if` block below)
+    ctx.ensure_object(dict)
+    ctx.obj[VERBOSE_KEY] = verbose
     logger.addHandler(logging.StreamHandler())
     if verbose > 1:
         logger.setLevel(logging.DEBUG)
@@ -118,7 +125,7 @@ def log_call(func):
         args_string = ", ".join([repr(a) for a in args])
         kwargs_string = ", ".join([f"{k}={v!r}" for k, v in kwargs.items()])
         sep = ", " if args_string and kwargs_string else ""
-        logger.debug(f"{func.__name__}({args_string}{sep}{kwargs_string})")
+        logger.info(f"{func.__name__}({args_string}{sep}{kwargs_string})")
         ret = func(*args, **kwargs)
         return ret
 
@@ -202,7 +209,8 @@ class D2SSpecFile(SpecFile):
 @cli.command()
 @click.argument("path", type=click.Path(exists=True, file_okay=False))
 @log_call
-def run_prep(path):
+@click.pass_context
+def run_prep(ctx, path):
     """Run `rpmbuild -bp` in GITDIR.
 
     PATH needs to be a dist-git repository.
@@ -213,20 +221,16 @@ def run_prep(path):
         cwd = Path.cwd()
         logger.debug(f"Running rpmbuild in {cwd}")
         specfile_path = Path(f"SPECS/{cwd.name}.spec")
-        setup = re.compile("^%setup ", re.MULTILINE)
-        spec = specfile_path.read_text()
-        spec, number_of_subs = setup.subn("%gitsetup ", spec)
-        if number_of_subs > 1:
-            raise RuntimeError("Wow! Multiple %setup macros in the spec file!")
-        if number_of_subs:
-            specfile_path.write_text(spec)
+
+        verbosity_level = ""
+        if ctx.obj[VERBOSE_KEY]:  # -vv can be super-duper verbose
+            verbosity_level = "-" + "v" * ctx.obj[VERBOSE_KEY]
         try:
-            stdout = rpmbuild(
+            running_cmd = rpmbuild(
                 "--nodeps",
+                verbosity_level,
                 "--define",
                 f"_topdir {cwd}",
-                "--define",
-                "__scm git",
                 "-bp",
                 specfile_path,
             )
@@ -235,16 +239,15 @@ def run_prep(path):
                 logger.debug(str(line))
             raise
 
-        repo = git.Repo(cwd)
-        # let's revert the spec change in dist-git
-        repo.git.checkout("--", "SPECS/")
+        logger.debug(running_cmd)  # this will print stdout
+        logger.debug(running_cmd.stderr.decode())
 
         hook_cmd = get_hook(Path(path), AFTER_PREP_HOOK)
         if hook_cmd:
             bash = sh.Command("bash")
             bash("-c", hook_cmd)
 
-    return stdout
+    return running_cmd.stdout  # why do we return here?
 
 
 def get_build_dir(path: Path):
@@ -320,7 +323,8 @@ def cherry_pick_base(gitdir, from_branch, to_branch):
 @click.argument("from_branch", type=click.STRING)
 @click.argument("to_branch", type=click.STRING)
 @log_call
-def rebase_patches(gitdir, from_branch, to_branch):
+@click.pass_context
+def rebase_patches(ctx, gitdir, from_branch, to_branch):
     """Rebase FROM_BRANCH to TO_BRANCH
 
     With this commits corresponding to patches can be transferred to
@@ -330,6 +334,14 @@ def rebase_patches(gitdir, from_branch, to_branch):
     """
     repo = git.Repo(gitdir)
     repo.git.checkout(from_branch)
+
+    if repo.head.commit.message == "Various changes\n":
+        repo.git.checkout(to_branch)
+        repo.git.cherry_pick(from_branch)
+        ctx.invoke(create_tag, tag=START_TAG, path=gitdir, branch=to_branch)
+        repo.git.checkout(from_branch)
+        repo.git.reset("--hard", "HEAD^")
+
     repo.git.rebase("--root", "--onto", to_branch)
     repo.git.checkout(to_branch)
     repo.git.merge("--ff-only", "-q", from_branch)
@@ -342,20 +354,32 @@ def _copy_files(
     glob: str,
     ignore_tarballs: bool = False,
     ignore_patches: bool = False,
+    include_files: Optional[List[str]] = None,
 ) -> None:
     """
     Copy all glob files from origin to dest
     """
     dest.mkdir(parents=True, exist_ok=True)
 
-    for file_ in origin.glob(glob):
-        if ignore_tarballs and file_.name.endswith((".tar.gz", ".tar.xz", ".tar.bz2")):
-            logger.debug(f"ignoring source file {file_}")
-            continue
-        if ignore_patches and file_.name.endswith(".patch"):
-            logger.debug(f"ignoring source file {file_}")
-            continue
-        shutil.copy2(file_, dest / file_.name)
+    present_files = set(origin.glob(glob))
+    files_to_copy = set()
+
+    if include_files:
+        for i in include_files:
+            files_to_copy.update(set(origin.glob(i)))
+
+    if ignore_tarballs:
+        for e in ("*.tar.gz", "*.tar.xz", "*.tar.bz2"):
+            present_files.difference_update(set(origin.glob(e)))
+    if ignore_patches:
+        present_files.difference_update(set(origin.glob("*.patch")))
+
+    files_to_copy.update(present_files)
+
+    for file_ in files_to_copy:
+        file_dest = dest / file_.name
+        logger.debug(f"copying {file_} to {file_dest}")
+        shutil.copy2(file_, file_dest)
 
 
 @cli.command()
@@ -375,12 +399,14 @@ def copy_spec(ctx, origin, dest):
 @click.pass_context
 def copy_all_sources(ctx, origin, dest):
     """Copy 'SOURCES/*' from a dist-git repo to a source-git repo."""
+    include_files = get_hook(Path(dest), INCLUDE_SOURCES)
     _copy_files(
         origin=Path(origin) / "SOURCES",
         dest=Path(dest) / "SPECS",
         glob="*",
         ignore_tarballs=True,
         ignore_patches=True,
+        include_files=include_files,
     )
 
 
@@ -517,19 +543,8 @@ def apply_patches(ctx, remove_patches, gitdir):
 def commit(gitdir, m):
     """Commit staged changes in GITDIR."""
     repo = git.Repo(gitdir)
-    try:
-        # I'd love to use repo.index.entries but it just doesn't correspond
-        # to actual index/staging area, it looks like working tree actually
-        # instead we just check if there is something in index by doing diff w/ HEAD
-        diff = repo.index.diff(other="HEAD")
-    except BadName as ex:
-        # the repo is empty and there is no HEAD, not an error
-        logger.debug(f"can't diff index and HEAD: {ex}")
-        diff = True
-    if not diff:
-        logger.info("Nothing to commit, aborting commit process.")
-        return
-    repo.git.commit(m=m)
+    # some of the commits may be empty and it's not an error, e.g. extra source files
+    repo.git.commit("--allow-empty", m=m)
 
 
 @cli.command()
@@ -582,7 +597,7 @@ def create_tag(tag, path, branch):
     """Create a Git TAG at the tip of BRANCH
     """
     repo = git.Repo(path)
-    repo.create_tag(tag, ref=branch)
+    repo.create_tag(tag, ref=branch, force=True)
 
 
 @cli.command("comment-out-patches")
@@ -644,11 +659,6 @@ def convert_with_prep(ctx, origin, dest):
     ctx.invoke(copy_spec, origin=origin_dir, dest=dest_dir)
     ctx.invoke(stage, gitdir=dest_dir, add="SPECS")
     ctx.invoke(commit, m="Add spec-file for the distribution", gitdir=dest_dir)
-    ctx.invoke(
-        comment_out_patches,
-        source_git_dir=dest_dir,
-        absolute_sources_path=str(Path(origin_dir, "SOURCES")),
-    )
 
     ctx.invoke(copy_all_sources, origin=origin_dir, dest=dest_dir)
     ctx.invoke(stage, gitdir=dest_dir, add="SPECS")

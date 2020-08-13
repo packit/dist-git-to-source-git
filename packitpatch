@@ -3,27 +3,33 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
 
+# do set -x for development/debugging
 set -eu
 
-# This patchnum is not the same as the patchnum in the spec file, as we just
-# sequentially count the patches here.
-PATCHNUM=1
-[ -f /tmp/patchnum ] && PATCHNUM=$(cat /tmp/patchnum)
-
-patch_file=$(mktemp)
-cat - > "$patch_file"
-
-set +e
-# Ignore all the flags unknown to git am
-git_am_options=$(getopt -o qp: -- $@)
-cat "$patch_file" | /usr/bin/git am $git_am_options
-git_am_exit_code=$?
-set -e
-
-if [ $git_am_exit_code -ne 0 ]; then
-    cat "$patch_file" | /usr/bin/patch $@
-    git add .
-    git commit -m "Apply patch #$PATCHNUM"
+# we cannot override %__scm_setup_patch b/c it is called from %autosetup
+# and some specs have %setup + %autopatch, so we need to make sure
+# the git repo exists here
+if [ ! -d .git ]; then
+  git init
+  git add .
+  # that PWD magic prints the name of the PWD, which usually is NAME-VERSION
+  git commit --allow-empty -a -m "${PWD##*/} base"
 fi
 
-echo $((PATCHNUM+1)) > /tmp/patchnum
+patch_path=$1
+patch_name=$(basename $1)
+patch_id=$2
+
+# we process first and second arg above, the rest is for patch
+cat - | /usr/bin/patch ${@:3}
+
+commit_message=$(cat << EOF
+Apply patch ${patch_name}
+
+patch_name: ${patch_name}
+location_in_specfile: ${patch_id}
+present_in_specfile: true
+EOF
+)
+git add .
+git commit -m "$commit_message"
