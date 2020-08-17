@@ -34,4 +34,4 @@ VOLUME /workdir
 COPY macros.packit /usr/lib/rpm/macros.d/macros.packit
 COPY packitpatch /usr/bin/packitpatch
 
-ENTRYPOINT ["dist2src"]
+CMD ["dist2src"]
