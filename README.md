@@ -186,3 +186,27 @@ require setup in your environment:
   podman has better performance than rootless, so `CONTAINER_ENGINE="sudo podman"`).
 - Have mock installed and set up -- last step of the testing is to build the
   generated SRPM from a source-git repo using `mock --rebuild -r centos-stream-x86_64`).
+
+Once prereqs are met, you can run the tests like this:
+
+```
+$ pytest-3 tests/test_convert.py::test_conversions
+```
+
+It's also possible to invoke a single case (package), the example below also
+shows how to change the container engine (don't forget to build the image
+properly `CONTAINER_ENGINE='sudo podman' make build`):
+
+```
+$ CONTAINER_ENGINE='sudo podman' pytest-3 'tests/test_convert.py::test_conversions[rpm-c8s]'
+===================================== test session starts =====================================
+platform linux -- Python 3.8.5, pytest-4.6.11, py-1.8.2, pluggy-0.13.1 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/tt/g/packit-service/dist-git-to-source-git
+plugins: betamax-0.8.1, celery-4.3.0, cov-2.10.0
+collected 6 items
+
+tests/test_convert.py::test_conversions[rpm-c8s] PASSED                                 [ 16%]
+
+================================== 1 passed in 21.39 seconds ==================================
+```
