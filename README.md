@@ -210,3 +210,6 @@ tests/test_convert.py::test_conversions[rpm-c8s] PASSED                         
 
 ================================== 1 passed in 21.39 seconds ==================================
 ```
+
+**The test suite works only with root podman, so please make sure to run it
+with `CONTAINER_ENGINE='sudo podman'`.** Or feel free to fix it.
