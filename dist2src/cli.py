@@ -222,18 +222,18 @@ def run_prep(ctx, path):
         logger.debug(f"Running rpmbuild in {cwd}")
         specfile_path = Path(f"SPECS/{cwd.name}.spec")
 
-        verbosity_level = ""
+        rpmbuild_args = [
+            "--nodeps",
+            "--define",
+            f"_topdir {cwd}",
+            "-bp",
+        ]
         if ctx.obj[VERBOSE_KEY]:  # -vv can be super-duper verbose
-            verbosity_level = "-" + "v" * ctx.obj[VERBOSE_KEY]
+            rpmbuild_args.append("-" + "v" * ctx.obj[VERBOSE_KEY])
+        rpmbuild_args.append(specfile_path)
+
         try:
-            running_cmd = rpmbuild(
-                "--nodeps",
-                verbosity_level,
-                "--define",
-                f"_topdir {cwd}",
-                "-bp",
-                specfile_path,
-            )
+            running_cmd = rpmbuild(*rpmbuild_args)
         except sh.ErrorReturnCode as e:
             for line in e.stderr.splitlines():
                 logger.debug(str(line))
