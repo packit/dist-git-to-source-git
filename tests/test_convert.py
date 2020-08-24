@@ -59,6 +59,8 @@ def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
             "libvirt",
             "c8s-stream-rhel",
         ),  # %autosetup -S git_am -N + weirdness + %autopatch
+        # ( "libreport", "c8s")  # -S git, they redefine "__scm_apply_git"
+        ("vhostmd", "c8s"),  # -S git, eazy
     ),
 )
 def test_conversions(tmp_path: Path, package_name, branch):
