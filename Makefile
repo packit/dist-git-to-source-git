@@ -9,6 +9,7 @@ DIR ?= git.centos.org
 IMAGE_NAME := dist2src
 CONTAINER_ENGINE ?= $(shell command -v podman 2> /dev/null || echo docker)
 CONTAINER_CMD ?= /bin/bash
+TEST_TARGET ?= ./tests
 
 usage:
 	@echo "Run 'make convert' to run the convert or 'make clean' to clean up things."
@@ -38,9 +39,12 @@ run:
 	$(CONTAINER_ENGINE) run \
 		-ti --rm \
 		-v $(CURDIR)/dist2src:/usr/local/lib/python3.6/site-packages/dist2src:Z \
-		-v $(CURDIR)/packitpatch:/usr/bin/packitpatch \
-		-v $(CURDIR)/macros.packit:/usr/lib/rpm/macros.d/macros.packit \
+		-v $(CURDIR)/packitpatch:/usr/bin/packitpatch:Z \
+		-v $(CURDIR)/macros.packit:/usr/lib/rpm/macros.d/macros.packit:Z \
 		--entrypoint= \
 		-u $(shell id -u) \
 		$(OPTS) \
 		$(IMAGE_NAME) $(CONTAINER_CMD)
+
+check:
+	pytest-3 --color=yes --showlocals -vv $(TEST_TARGET)
