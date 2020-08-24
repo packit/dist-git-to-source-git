@@ -18,9 +18,16 @@
 %{__git} add .\
 %{__git} commit %{-q} --allow-empty -a -m "%{NAME}-%{VERSION} base"
 
+# commit_msg contains commit message of the last commit
 %__scm_apply_git_am(qp:m:)\
 %{__git} am %{-q} %{-p:-p%{-p*}}\
 patch_name=`basename %{1}`\
 commit_msg=`%{__git} log --format=%B -n1`\
 metadata_commit_msg=`printf "patch_name: $patch_name\\npresent_in_specfile: true\\nlocation_in_specfile: %{2}\\nsquash_commits: true"`\
 %{__git} commit --amend -m "$commit_msg" -m "$metadata_commit_msg"
+
+%__scm_apply_git(qp:m:)\
+%{__git} apply --index %{-p:-p%{-p*}} -\
+patch_name=`basename %{1}`\
+metadata_commit_msg=`printf "patch_name: $patch_name\\npresent_in_specfile: true\\nlocation_in_specfile: %{2}"`\
+%{__git} commit %{-q} -m %{-m*} -m "$metadata_commit_msg" --author "%{__scm_author}"
