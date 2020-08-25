@@ -27,8 +27,8 @@ def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
     make_env.update(
         {
             "OPTS": (
-                f"-v {dist_git_path}:{container_dg_p}:rw "
-                f"-v {sg_path}:{container_sg_p}:rw --workdir /"
+                f"-v {dist_git_path}:{container_dg_p}:rw,Z "
+                f"-v {sg_path}:{container_sg_p}:rw,Z --workdir /"
             ),
             "CONTAINER_CMD": (
                 f"dist2src -v convert-with-prep "
@@ -73,7 +73,7 @@ def test_conversions(tmp_path: Path, package_name, branch):
     subprocess.check_call(["packit", "--debug", "srpm"], cwd=sg_path)
     srpm_path = next(sg_path.glob("*.src.rpm"))
     assert srpm_path.exists()
-    # we don't care about the build itself, mainly that patches are applied correctly, hence -bp
+    # TODO: implement `packit prep` and run it here
     return
     subprocess.check_call(
         [
