@@ -29,7 +29,7 @@ def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
                 f"-v {sg_path}:{container_sg_p}:rw,Z --workdir /"
             ),
             "CONTAINER_CMD": (
-                f"dist2src -v convert-with-prep "
+                f"dist2src -v convert "
                 f"{container_dg_p}:{branch} {container_sg_p}:{branch}"
             ),
         }
