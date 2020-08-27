@@ -22,6 +22,10 @@
       args:
         chdir: "{{ project_dir }}"
       become: true
+    - name: pip-install dist2src for unit tests
+      pip:
+        name: "{{ project_dir }}"
+      become: true
     - name: Run tests
       command: make check
       args:
