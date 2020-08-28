@@ -13,6 +13,8 @@
 %__scm_apply_patch(qp:m:)\
 /usr/bin/packitpatch %{1} %{2} %{-p:-p%{-p*}} %{-q:-s} --fuzz=%{_default_patch_fuzz} %{_default_patch_flags}
 
+%__patch /usr/bin/packitpatch %{1} %{2} %{-p:-p%{-p*}} %{-q:-s} --fuzz=%{_default_patch_fuzz} %{_default_patch_flags}
+
 %__scm_setup_git(q)\
 %{__git} init %{-q}\
 %{__git} add .\
