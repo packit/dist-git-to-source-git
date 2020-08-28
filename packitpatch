@@ -16,8 +16,14 @@ if [ ! -d .git ]; then
   git commit --allow-empty -a -m "${PWD##*/} base"
 fi
 
-patch_path=$1
-patch_name=$(basename $1)
+if [ "$1" == "%{1}" ]; then
+  # rpm pipes the patch here
+  # also, Michal Domonkos is a genius
+  patch_path=$(readlink -f /dev/stdin)
+else
+  patch_path=$1
+fi
+patch_name=$(basename $patch_path)
 patch_id=$2
 
 # we process first and second arg above, the rest is for patch
@@ -27,9 +33,12 @@ commit_message=$(cat << EOF
 Apply patch ${patch_name}
 
 patch_name: ${patch_name}
-location_in_specfile: ${patch_id}
 present_in_specfile: true
 EOF
 )
+if [ "$patch_id" != "%{2}" ]; then
+  # concat 2 strings and separate them with \n - a nightmare to do in bash
+  printf -v commit_message "${commit_message}\nlocation_in_specfile: ${patch_id}"
+fi
 git add .
 git commit -m "$commit_message"

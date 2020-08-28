@@ -4,12 +4,14 @@
 # SPDX-License-Identifier: MIT
 import logging
 import os
+import re
 import shutil
 from pathlib import Path
 from typing import Optional, Dict, Any, Union, List
 
 import git
 import sh
+from packit.specfile import Specfile
 from yaml import dump
 
 logger = logging.getLogger(__name__)
@@ -240,6 +242,33 @@ class Dist2Src:
 
         logger.debug(f"output = {stdout}")
 
+    def _enforce_autosetup(self):
+        """
+        We are unable to get a git repo when a packages uses %setup + %patch
+        so we need to turn %setup into %autosetup -N
+        """
+        s = Specfile(
+            self.dist_git_path / self.relative_specfile_path,
+            sources_dir=self.dist_git_path / "SOURCES/",
+        )
+        prep_lines = s.spec_content.section("%prep")
+
+        for i, line in enumerate(prep_lines):
+            if line.startswith(("%autosetup", "%autopatch")):
+                logger.info("This package uses %autosetup or %autopatch.")
+                # cool, we're good
+                return
+            elif line.startswith("%setup"):
+                # %setup -> %autosetup -p1
+                prep_lines[i] = line.replace("%setup", "%autosetup -N")
+                # %autosetup does not accept -q, remove it
+                prep_lines[i] = re.sub(r"\s+-q", r"", prep_lines[i])
+
+            if prep_lines[i] != line:
+                logger.debug(f"{line!r} -> {prep_lines[i]!r}")
+
+        s.save()
+
     def run_prep(self):
         """
         run `rpmbuild -bp` in the dist-git repo to get a git-repo
@@ -262,6 +291,8 @@ class Dist2Src:
                 rpmbuild_args.append("-" + "v" * self.log_level)
             rpmbuild_args.append(specfile_path)
 
+            self._enforce_autosetup()
+
             try:
                 running_cmd = rpmbuild(*rpmbuild_args)
             except sh.ErrorReturnCode as e:
@@ -269,8 +300,10 @@ class Dist2Src:
                     logger.debug(str(line))
                 raise
 
+            self.dist_git.repo.git.checkout(self.relative_specfile_path)
+
             logger.debug(f"rpmbuild stdout = {running_cmd}")  # this will print stdout
-            logger.debug(f"rpmbuild stderr = {running_cmd.stderr.decode()}")
+            logger.info(f"rpmbuild stderr = {running_cmd.stderr.decode()}")
 
             hook_cmd = get_hook(self.package_name, AFTER_PREP_HOOK)
             if hook_cmd:

@@ -182,12 +182,12 @@ def add_packit_config(ctx, dest: str):
     d2s.add_packit_config()
 
 
-@cli.command("convert-with-prep")
+@cli.command("convert")
 @click.argument("origin", type=click.STRING)
 @click.argument("dest", type=click.STRING)
 @log_call
 @click.pass_context
-def convert_with_prep(ctx, origin: str, dest: str):
+def convert(ctx, origin: str, dest: str):
     """Convert a dist-git repository into a source-git repository, using
     'rpmbuild' and executing the "%prep" stage from the spec file.
 

@@ -63,24 +63,21 @@ Simply put:
 
 ## Using `rpmbuild -bp` to generate source-git repositories
 
-`convert-with-prep` is a slightly different approach than the original
-one as instead of parsing the SPEC-file to apply the patches it relies on
-`rpmbuild -bp` to run the `%prep` stage from the spec file which results
-in a directory containing the unpacked sources (under `./BUILD/*`).
+The core way of the conversion process is running `rpmbuild -bp` to execute the
+`%prep` stage from the spec file which results in a directory containing the
+unpacked sources (under `<dist-git>/BUILD/*`).
 
 With the following RPM-macro tweaks this directory can be turned into a Git
 repository from where the script can pull the history resulting from the
 conversion:
 
-- `__scm` is always `git`—this way all `%autosetup` macros will result in a
-  Git repository, even the ones which are missing the `-S git[_am]` flag.
+- We override all `scm_setup` and `scm_apply` macros so they create a git repo
+  from the archive and commit every patch applied.
 - SPEC-files which use `%setup` are modified before the conversion to use
-  `%gitsetup` instead. `%gitsetup` is a [custom macro](macros.packit), which
-  makes the `%prep` section to be executed similar to how `%autosetup` would
-  do: initializes a Git repository and applies the patches [as Git
-  commits](packitpatch). Currently it will also create a "various changes"
-  commit to capture any modification of the exploded sources which happens
-  additionally to applying the patches.
+  `%autosetup -N` instead. This means the tool initializes a Git repository and
+  applies the patches [as Git commits](packitpatch). Currently it will also
+  create a "Changes after running %prep" commit to capture any modification of
+  the exploded sources which happens additionally to applying the patches.
 
 ## Converting in a CentOS environment
 

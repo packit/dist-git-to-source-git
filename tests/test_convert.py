@@ -29,7 +29,7 @@ def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
                 f"-v {sg_path}:{container_sg_p}:rw,Z --workdir /"
             ),
             "CONTAINER_CMD": (
-                f"dist2src -v convert-with-prep "
+                f"dist2src -vv convert "
                 f"{container_dg_p}:{branch} {container_sg_p}:{branch}"
             ),
         }
@@ -58,7 +58,10 @@ def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
             "c8s-stream-rhel",
         ),  # %autosetup -S git_am -N + weirdness + %autopatch
         # ( "libreport", "c8s")  # -S git, they redefine "__scm_apply_git"
+        ("socat", "c8s"),  # %setup + %patch
         ("vhostmd", "c8s"),  # -S git, eazy
+        ("autogen", "c8s"),
+        ("autofs", "c8s"),
     ),
 )
 def test_conversions(tmp_path: Path, package_name, branch):
