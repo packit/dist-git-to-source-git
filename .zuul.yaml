@@ -13,10 +13,4 @@
     parent: base
     attempts: 1
     description: Run tests
-    extra-vars:
-      ansible_python_interpreter: /usr/bin/python3
-    nodeset:
-      nodes:
-        - name: test-node
-          label: cloud-fedora-32
     run: zuul-tests.yaml
