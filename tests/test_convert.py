@@ -18,6 +18,17 @@ def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
             dist_git_path,
         ]
     )
+    container_sg_p = f"/s/{package_name}"
+    container_dg_p = f"/d/{package_name}"
+    run_in_container(
+        f"dist2src -v convert {container_dg_p}:{branch} {container_sg_p}:{branch}",
+        package_name,
+        dist_git_path,
+        sg_path,
+    )
+
+
+def run_in_container(cmd, package_name, dist_git_path, sg_path):
     make_env = os.environ.copy()
     make_cmd = ["make", "run"]
     container_sg_p = f"/s/{package_name}"
@@ -28,10 +39,7 @@ def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
                 f"-v {dist_git_path}:{container_dg_p}:rw,Z "
                 f"-v {sg_path}:{container_sg_p}:rw,Z --workdir /"
             ),
-            "CONTAINER_CMD": (
-                f"dist2src -vv convert "
-                f"{container_dg_p}:{branch} {container_sg_p}:{branch}"
-            ),
+            "CONTAINER_CMD": cmd,
         }
     )
 
@@ -70,8 +78,12 @@ def test_conversions(tmp_path: Path, package_name, branch):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
     convert_repo(package_name, dist_git_path, sg_path, branch=branch)
-    # if rootless, we fail here to fetch the archive b/c the container user created the dir
-    subprocess.check_call(["packit", "--debug", "srpm"], cwd=sg_path)
+    run_in_container(
+        f"sh -c 'cd /s/{package_name} && packit --debug srpm'",
+        package_name,
+        dist_git_path,
+        sg_path,
+    )
     srpm_path = next(sg_path.glob("*.src.rpm"))
     assert srpm_path.exists()
     # TODO: implement `packit prep` and run it here
