@@ -116,14 +116,18 @@ sub-directory and the resulting source-git repo is going to be stored in
 
 ## Tests
 
+**The test suite works only with root podman, so please make sure to run it
+with `CONTAINER_ENGINE='sudo podman'`.** (the reason is the way how UIDs are
+mapped when running rootless)
+
 You can find functional tests which convert real dist-git packages. They
 require setup in your environment:
 
 - Build an image with the dist2src inside (`make build`) -- you can override
-  container engine of your choice with env var `CONTAINER_ENGINE` (hint, root
-  podman has better performance than rootless, so `CONTAINER_ENGINE="sudo podman"`).
+  container engine of your choice with env var `CONTAINER_ENGINE`.
 - Have mock installed and set up -- last step of the testing is to build the
-  generated SRPM from a source-git repo using `mock --rebuild -r centos-stream-x86_64`).
+  generated SRPM from a source-git repo using
+  `mock --rebuild -r centos-stream-x86_64`).
 
 Once prereqs are met, you can run the tests like this:
 
@@ -132,8 +136,8 @@ $ pytest-3 tests/test_convert.py::test_conversions
 ```
 
 It's also possible to invoke a single case (package), the example below also
-shows how to change the container engine (don't forget to build the image
-properly `CONTAINER_ENGINE='sudo podman' make build`):
+shows how to change the container engine (don't forget to build the image first
+`CONTAINER_ENGINE='sudo podman' make build`):
 
 ```
 $ CONTAINER_ENGINE='sudo podman' pytest-3 'tests/test_convert.py::test_conversions[rpm-c8s]'
@@ -148,6 +152,3 @@ tests/test_convert.py::test_conversions[rpm-c8s] PASSED                         
 
 ================================== 1 passed in 21.39 seconds ==================================
 ```
-
-**The test suite works only with root podman, so please make sure to run it
-with `CONTAINER_ENGINE='sudo podman'`.** Or feel free to fix it.
