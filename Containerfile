@@ -16,7 +16,7 @@ RUN $package_manager -y install \
     autoconf \
     automake \
     && $package_manager -y clean all \
-    && pip3 install ipdb
+    && pip3 install ipdb pytest
 
 
 RUN git config --system user.name "Packit" && git config --system user.email "packit"
