@@ -7,7 +7,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Optional, Dict, Any, Union, List
+from typing import Optional, Dict, Any, Union
 
 import git
 import sh
@@ -21,7 +21,6 @@ TARGETS = ["centos-stream-x86_64"]
 START_TAG = "sg-start"
 POST_CLONE_HOOK = "post-clone"
 AFTER_PREP_HOOK = "after-prep"
-INCLUDE_SOURCES = "include-files"
 TEMP_SG_BRANCH = "updates"
 
 # would be better to have them externally (in a file at least)
@@ -49,47 +48,12 @@ HOOKS: Dict[str, Dict[str, Any]] = {
             # f"git commit -a -m '{KERNEL_DEBRAND_PATCH_MESSAGE}'"
         )
     },
-    "pacemaker": {INCLUDE_SOURCES: ["nagios-agents-metadata-*.tar.gz"]},
 }
 
 
 def get_hook(package_name: str, hook_name: str) -> Optional[str]:
     """ get a hook's command for particular source-git repo """
     return HOOKS.get(package_name, {}).get(hook_name, None)
-
-
-def _copy_files(
-    origin: Path,
-    dest: Path,
-    glob: str,
-    ignore_tarballs: bool = False,
-    ignore_patches: bool = False,
-    include_files: Optional[List[str]] = None,
-) -> None:
-    """
-    Copy all glob files from origin to dest
-    """
-    dest.mkdir(parents=True, exist_ok=True)
-
-    present_files = set(origin.glob(glob))
-    files_to_copy = set()
-
-    if include_files:
-        for i in include_files:
-            files_to_copy.update(set(origin.glob(i)))
-
-    if ignore_tarballs:
-        for e in ("*.tar.gz", "*.tar.xz", "*.tar.bz2"):
-            present_files.difference_update(set(origin.glob(e)))
-    if ignore_patches:
-        present_files.difference_update(set(origin.glob("*.patch")))
-
-    files_to_copy.update(present_files)
-
-    for file_ in files_to_copy:
-        file_dest = dest / file_.name
-        logger.debug(f"copying {file_} to {file_dest}")
-        shutil.copy2(file_, file_dest)
 
 
 def get_build_dir(path: Path):
@@ -212,6 +176,15 @@ class Dist2Src:
         self.log_level = log_level
 
     @property
+    def dist_git_spec(self):
+        if not self.dist_git_path:
+            raise RuntimeError("dist_git_path not defined")
+        return Specfile(
+            self.dist_git_path / self.relative_specfile_path,
+            sources_dir=self.dist_git_path / "SOURCES/",
+        )
+
+    @property
     def package_name(self):
         if self.dist_git_path:
             return self.dist_git_path.name
@@ -247,11 +220,7 @@ class Dist2Src:
         We are unable to get a git repo when a packages uses %setup + %patch
         so we need to turn %setup into %autosetup -N
         """
-        s = Specfile(
-            self.dist_git_path / self.relative_specfile_path,
-            sources_dir=self.dist_git_path / "SOURCES/",
-        )
-        prep_lines = s.spec_content.section("%prep")
+        prep_lines = self.dist_git_spec.spec_content.section("%prep")
 
         for i, line in enumerate(prep_lines):
             if line.startswith(("%autosetup", "%autopatch")):
@@ -267,7 +236,7 @@ class Dist2Src:
             if prep_lines[i] != line:
                 logger.debug(f"{line!r} -> {prep_lines[i]!r}")
 
-        s.save()
+        self.dist_git_spec.save()
 
     def run_prep(self):
         """
@@ -390,15 +359,11 @@ class Dist2Src:
         dg_path = self.dist_git_path / "SOURCES"
         sg_path = self.source_git_path / "SPECS"
         logger.info(f"Copy all sources from {dg_path} to {sg_path}.")
-        include_files = get_hook(self.package_name, INCLUDE_SOURCES)
-        _copy_files(
-            origin=dg_path,
-            dest=sg_path,
-            glob="*",
-            ignore_tarballs=True,
-            ignore_patches=True,
-            include_files=include_files,
-        )
+
+        for file_ in self.dist_git_spec.get_sources():
+            file_dest = sg_path / Path(file_).name
+            logger.debug(f"copying {file_} to {file_dest}")
+            shutil.copy2(file_, file_dest)
 
     def copy_spec(self):
         """
