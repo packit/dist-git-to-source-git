@@ -1,0 +1,29 @@
+---
+- name: Build test image & run tests in container
+  hosts: all
+  tasks:
+    - name: Install git and podman
+      dnf:
+        name:
+          - git-core
+          - podman
+      become: true
+    - name: Set project_dir variable when running this locally
+      set_fact:
+        project_dir: "{{ playbook_dir }}"
+    - name: Set project_dir variable when running in zuul
+      set_fact:
+        project_dir: "{{ ansible_user_dir }}/{{ zuul.project.src_dir }}"
+      when: zuul is defined
+    - name: Build dist2src container image
+      command: make build
+      args:
+        chdir: "{{ project_dir }}"
+      become: true
+    - name: Run tests
+      command: make check-in-container
+      args:
+        chdir: "{{ project_dir }}"
+      environment:
+        COLOR: "no"
+      become: true

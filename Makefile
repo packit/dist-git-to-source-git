@@ -1,7 +1,7 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
 
-.PHONY: usage convert clean
+.PHONY: usage convert clean check-in-container
 
 PACKAGE ?= rpm
 BRANCH ?= c8s
@@ -10,6 +10,7 @@ IMAGE_NAME := dist2src
 CONTAINER_ENGINE ?= $(shell command -v podman 2> /dev/null || echo docker)
 CONTAINER_CMD ?= /bin/bash
 TEST_TARGET ?= ./tests
+COLOR ?= yes
 
 usage:
 	@echo "Run 'make convert' to run the convert or 'make clean' to clean up things."
@@ -47,4 +48,16 @@ run:
 		$(IMAGE_NAME) $(CONTAINER_CMD)
 
 check:
-	pytest-3 --color=yes --showlocals -vv $(TEST_TARGET)
+	pytest-3 --color=$(COLOR) --showlocals -vv $(TEST_TARGET)
+
+check-in-container:
+	$(CONTAINER_ENGINE) run \
+		-ti --rm \
+		-v $(CURDIR)/dist2src:/usr/local/lib/python3.6/site-packages/dist2src:Z \
+		-v $(CURDIR)/packitpatch:/usr/bin/packitpatch:Z \
+		-v $(CURDIR)/macros.packit:/usr/lib/rpm/macros.d/macros.packit:Z \
+		-v $(CURDIR)/tests_localhost:/tests_localhost:Z \
+		--entrypoint= \
+		-u $(shell id -u) \
+		$(OPTS) \
+		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv /tests_localhost
