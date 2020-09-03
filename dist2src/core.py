@@ -7,7 +7,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any, Union
 
 import git
 import sh
@@ -105,7 +105,7 @@ class GitRepo:
         elif create_branch:
             self.repo.git.checkout("-B", branch)
         else:
-            self.repo.git.checkout(branch)
+            self.repo.git.checkout(branch, force=True)
 
     def commit(self, message: str):
         """Commit staged changes in GITDIR."""
@@ -139,7 +139,12 @@ class GitRepo:
         """Create a Git TAG at the tip of BRANCH"""
         self.repo.create_tag(tag, ref=branch, force=True)
 
-    def cherry_pick_base(self, from_branch, to_branch):
+    def get_tags_for_head(self) -> List[str]:
+        return list(
+            tag.name for tag in self.repo.tags if tag.commit == self.repo.head.commit
+        )
+
+    def cherry_pick_base(self, from_branch, to_branch, theirs=False):
         """Cherry-pick the first commit of a branch
 
         Cherry-pick the first commit of FROM_BRANCH to TO_BRANCH in the
@@ -147,7 +152,33 @@ class GitRepo:
         """
         num_commits = sum(1 for _ in self.repo.iter_commits(from_branch))
         self.checkout(to_branch, create_branch=True)
-        self.repo.git.cherry_pick(f"{from_branch}~{num_commits - 1}")
+        git_options = (
+            {"strategy_option": "theirs", "keep_redundant_commits": True}
+            if theirs
+            else {}
+        )
+        self.repo.git.cherry_pick(f"{from_branch}~{num_commits - 1}", **git_options)
+
+    def revert_to_ref(self, ref, message=None):
+        message = message or f"Revert the state to {ref}"
+        # https://git-scm.com/book/en/v2/Git-Tools-Reset-Demystified
+        # Reset index without changing HEAD
+        self.repo.git.reset(ref, ".")
+        self.commit(message)
+        # clear the working-tree
+        self.repo.git.reset("HEAD", hard=True)
+
+    def clean(self):
+        """
+        Clean the repo.
+        """
+        # We need to use two `force` options
+        # to remove the submodules/git repos as well.
+        self.repo.git.clean("-xdff")
+
+    def fast_forwad(self, branch, to_ref):
+        self.checkout(branch)
+        self.repo.git.merge(to_ref, ff_only=True)
 
 
 class Dist2Src:
@@ -313,7 +344,11 @@ class Dist2Src:
         Convert a dist-git repository into a source-git repo.
         """
         self.dist_git.checkout(branch=origin_branch)
-        self.source_git.checkout(branch=dest_branch, orphan=True)
+        if self.source_git.repo.active_branch.name != dest_branch:
+            update = False
+            self.source_git.checkout(branch=dest_branch, orphan=True)
+        else:
+            update = True
 
         # expand dist-git and pull the history
         self.fetch_archive()
@@ -321,7 +356,7 @@ class Dist2Src:
         self.dist_git.commit_all(message="Changes after running %prep")
         self.fetch_branch(source_branch="master", dest_branch=TEMP_SG_BRANCH)
         self.source_git.cherry_pick_base(
-            from_branch=TEMP_SG_BRANCH, to_branch=dest_branch
+            from_branch=TEMP_SG_BRANCH, to_branch=dest_branch, theirs=update
         )
 
         # configure packit
@@ -412,7 +447,44 @@ class Dist2Src:
             self.source_git.checkout(from_branch)
             self.source_git.repo.git.reset("--hard", "HEAD^")
 
-        self.source_git.repo.git.rebase("--root", "--onto", to_branch)
         self.source_git.checkout(to_branch)
-        self.source_git.repo.git.merge("--ff-only", "-q", from_branch)
-        self.source_git.repo.git.branch("-d", from_branch)
+        commits_to_cherry_pick = [
+            c.hexsha[:8]  # shorter format for better readability in case of an error
+            for c in self.source_git.repo.iter_commits(from_branch)
+        ][-2::-1]
+        if commits_to_cherry_pick:
+            self.source_git.repo.git.cherry_pick(
+                *commits_to_cherry_pick,
+                keep_redundant_commits=True,
+                allow_empty=True,
+                strategy_option="theirs",
+            )
+        self.source_git.repo.git.branch("-D", from_branch)
+
+    def update_source_git(self, origin_branch: str, dest_branch: str):
+        """
+        Update the existing source-git.
+
+        1. Revert the patches.
+        2. Convert the dist-git to source-git
+        3. Fast-forward the branch
+
+        :param origin_branch: branch used as a dist-git source
+        :param dest_branch: source-git branch we need to update
+        """
+        self.dist_git.clean()
+        self.dist_git.checkout(branch=origin_branch)
+
+        dg_tags_for_head = self.dist_git.get_tags_for_head()
+        new_dest_branch = (
+            dg_tags_for_head[0]
+            if dg_tags_for_head
+            else f"{dest_branch}-{self.dist_git.repo.head.commit.hexsha:.8}"
+        )
+        self.source_git.checkout(dest_branch)
+        self.source_git.checkout(branch=new_dest_branch, create_branch=True)
+        self.source_git.revert_to_ref(START_TAG, message="Prepare for a new update")
+        self.convert(origin_branch=origin_branch, dest_branch=new_dest_branch)
+
+        # fast-forward old branch
+        self.source_git.fast_forwad(branch=dest_branch, to_ref=new_dest_branch)
