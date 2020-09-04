@@ -270,7 +270,7 @@ class Dist2Src:
                 running_cmd = rpmbuild(*rpmbuild_args)
             except sh.ErrorReturnCode as e:
                 for line in e.stderr.splitlines():
-                    logger.debug(str(line))
+                    logger.error(str(line))
                 raise
 
             if not (get_build_dir(self.dist_git_path).absolute() / ".git").is_dir():
