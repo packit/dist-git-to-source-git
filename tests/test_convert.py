@@ -48,8 +48,8 @@ def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
         ("HdrHistogram_c", "c8s"),  # eaaaaasy
         ("units", "c8"),  # autosetup + files created during %prep
         # %autosetup -S git_am + needs https://koji.mbox.centos.org/koji/taginfo?tagID=342
-        # "pacemaker",
-        # ("systemd", "c8s"),  # -S git_am
+        ("pacemaker", "c8s"),
+        ("systemd", "c8s"),  # -S git_am
         # ("kernel", "c8s"),  # !!!
         (
             "qemu-kvm",
