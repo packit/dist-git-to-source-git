@@ -40,5 +40,7 @@ if [ "$patch_id" != "%{2}" ]; then
   # concat 2 strings and separate them with \n - a nightmare to do in bash
   printf -v commit_message "${commit_message}\nlocation_in_specfile: ${patch_id}"
 fi
+
 git add .
-git commit -m "$commit_message"
+# patches can be empty, rpmbuild if fine with it
+git commit -m "$commit_message" --allow-empty
