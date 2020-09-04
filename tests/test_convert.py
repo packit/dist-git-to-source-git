@@ -64,6 +64,22 @@ def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
         ("vhostmd", "c8s"),  # -S git, eazy
         ("autogen", "c8s"),
         ("autofs", "c8s"),
+        ("NetworkManager", "c8s"),
+        ("dnf", "c8s"),
+        ("podman", "c8s-stream-rhel8"),
+        ("acpica-tools", "c8"),
+        # alsa-lib has an empty patch file, we need support in packit for that
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1875768
+        # https://github.com/packit/packit/issues/957
+        # ("alsa-lib", "c8s"),
+        # no %prep lol, https://github.com/packit/dist-git-to-source-git/issues/46
+        # ("appstream-data", "c8s"),
+        ("apr", "c8s"),
+        ("arpwatch", "c8s"),
+        # ("atlas", "c8s")  # insanity + requires lapack-devel to be present while converting
+        ("bind", "c8s"),
+        ("boom-boot", "c8s"),
+        ("boost", "c8s"),  # %setup + find + %patch
     ),
 )
 def test_conversions(tmp_path: Path, package_name, branch):
