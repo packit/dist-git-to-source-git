@@ -1,10 +1,27 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
-import os
+
 import subprocess
 from pathlib import Path
+from click.testing import CliRunner
 
 import pytest
+
+from dist2src.cli import cli
+from packit.cli.packit_base import packit_base
+from packit.utils import cwd
+
+
+def run_dist2src(*args, working_dir=None, **kwargs):
+    working_dir = working_dir or Path()
+    with cwd(working_dir):
+        cli_runner = CliRunner()
+        cli_runner.invoke(cli, *args, catch_exceptions=False, **kwargs)
+
+
+def run_packit(*args, **kwargs):
+    cli_runner = CliRunner()
+    cli_runner.invoke(packit_base, *args, catch_exceptions=False, **kwargs)
 
 
 def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
@@ -18,32 +35,9 @@ def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
             dist_git_path,
         ]
     )
-    container_sg_p = f"/s/{package_name}"
-    container_dg_p = f"/d/{package_name}"
-    run_in_container(
-        f"dist2src -v convert {container_dg_p}:{branch} {container_sg_p}:{branch}",
-        package_name,
-        dist_git_path,
-        sg_path,
+    run_dist2src(
+        ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
     )
-
-
-def run_in_container(cmd, package_name, dist_git_path, sg_path):
-    make_env = os.environ.copy()
-    make_cmd = ["make", "run"]
-    container_sg_p = f"/s/{package_name}"
-    container_dg_p = f"/d/{package_name}"
-    make_env.update(
-        {
-            "OPTS": (
-                f"-v {dist_git_path}:{container_dg_p}:rw,Z "
-                f"-v {sg_path}:{container_sg_p}:rw,Z --workdir /"
-            ),
-            "CONTAINER_CMD": cmd,
-        }
-    )
-
-    subprocess.check_call(make_cmd, env=make_env)
 
 
 @pytest.mark.parametrize(
@@ -78,11 +72,15 @@ def test_conversions(tmp_path: Path, package_name, branch):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
     convert_repo(package_name, dist_git_path, sg_path, branch=branch)
-    run_in_container(
-        f"sh -c 'cd /s/{package_name} && packit --debug srpm'",
-        package_name,
-        dist_git_path,
-        sg_path,
+
+    run_packit(
+        [
+            "--debug",
+            "srpm",
+            "--output",
+            str(sg_path / f"{package_name}.src.rpm"),
+            str(sg_path),
+        ]
     )
     srpm_path = next(sg_path.glob("*.src.rpm"))
     assert srpm_path.exists()

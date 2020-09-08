@@ -1,6 +1,5 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -8,24 +7,11 @@ from pathlib import Path
 import pytest
 
 from dist2src.core import Dist2Src
+from tests.test_convert import run_dist2src
 
 this_dir = Path(__file__).parent
 data_dir = this_dir / "data"
 acl_template = data_dir / "acl"
-
-
-def run_prep(dist_git_path: Path):
-    make_env = os.environ.copy()
-    make_cmd = ["make", "run"]
-    container_dg_p = f"/d/{dist_git_path.name}"
-    make_env.update(
-        {
-            "OPTS": (f"-v {dist_git_path}:{container_dg_p}:rw,Z "),
-            "CONTAINER_CMD": (f"dist2src -v run-prep {container_dg_p}"),
-        }
-    )
-
-    subprocess.check_call(make_cmd, env=make_env)
 
 
 def fetch_acl_archive(path: Path):
@@ -61,14 +47,6 @@ def acl(tmp_path: Path):
     return acl_path
 
 
-def test_run_prep(acl):
-    run_prep(acl)
-
-    assert acl.joinpath("BUILD").is_dir()
-    assert acl.joinpath("BUILD").joinpath("acl-2.2.53").is_dir()
-    assert acl.joinpath("BUILD").joinpath("acl-2.2.53").joinpath(".git").is_dir()
-
-
 # you cannot use fixtures in parametrize
 @pytest.mark.parametrize(
     "set_dist,set_src,expected",
@@ -96,3 +74,11 @@ def test_pkg_name_when_paths_not_set():
     assert "I'm sorry but nor dist_git_path nor source_git_path are defined." in str(
         exc
     )
+
+
+def test_run_prep(acl):
+    run_dist2src(["-v", "run-prep", str(acl)], working_dir=acl)
+
+    assert acl.joinpath("BUILD").is_dir()
+    assert acl.joinpath("BUILD").joinpath("acl-2.2.53").is_dir()
+    assert acl.joinpath("BUILD").joinpath("acl-2.2.53").joinpath(".git").is_dir()
