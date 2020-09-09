@@ -222,6 +222,10 @@ class Dist2Src:
         """
         prep_lines = self.dist_git_spec.spec_content.section("%prep")
 
+        if not prep_lines:
+            # e.g. appstream-data does not have a %prep section
+            return
+
         for i, line in enumerate(prep_lines):
             if line.startswith(("%autosetup", "%autopatch")):
                 logger.info("This package uses %autosetup or %autopatch.")
@@ -266,8 +270,13 @@ class Dist2Src:
                 running_cmd = rpmbuild(*rpmbuild_args)
             except sh.ErrorReturnCode as e:
                 for line in e.stderr.splitlines():
-                    logger.debug(str(line))
+                    logger.error(str(line))
                 raise
+
+            if not (get_build_dir(self.dist_git_path).absolute() / ".git").is_dir():
+                raise RuntimeError(
+                    ".git repo not present in the BUILD/ dir after running %prep"
+                )
 
             self.dist_git.repo.git.checkout(self.relative_specfile_path)
 
