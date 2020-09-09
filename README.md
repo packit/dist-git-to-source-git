@@ -116,39 +116,38 @@ sub-directory and the resulting source-git repo is going to be stored in
 
 ## Tests
 
-**The test suite works only with root podman, so please make sure to run it
-with `CONTAINER_ENGINE='sudo podman'`.** (the reason is the way how UIDs are
-mapped when running rootless)
+In `tests` test suite, you can find functional tests which convert
+real dist-git packages.
+They can be run inside container (`make build` and
+`make check-in-container`) or on localhost (`make check`).
 
-You can find functional tests which convert real dist-git packages. They
-require setup in your environment:
+- You can override container engine of your choice
+  with env var `CONTAINER_ENGINE`.
+- When running locally, have mock installed and set up -- last step of
+  the testing is to build the generated SRPM from a source-git repo
+  using `mock --rebuild -r centos-stream-x86_64`).
 
-- Build an image with the dist2src inside (`make build`) -- you can override
-  container engine of your choice with env var `CONTAINER_ENGINE`.
-- Have mock installed and set up -- last step of the testing is to build the
-  generated SRPM from a source-git repo using
-  `mock --rebuild -r centos-stream-x86_64`).
-
-Once prereqs are met, you can run the tests like this:
+It's also possible to invoke a single case (package):
 
 ```
-$ pytest-3 tests/test_convert.py::test_conversions
-```
-
-It's also possible to invoke a single case (package), the example below also
-shows how to change the container engine (don't forget to build the image first
-`CONTAINER_ENGINE='sudo podman' make build`):
-
-```
-$ CONTAINER_ENGINE='sudo podman' pytest-3 'tests/test_convert.py::test_conversions[rpm-c8s]'
-===================================== test session starts =====================================
-platform linux -- Python 3.8.5, pytest-4.6.11, py-1.8.2, pluggy-0.13.1 -- /usr/bin/python3
+$ TEST_TARGET="tests/test_convert.py::test_conversions[rpm-c8s]" make check-in-container
+/usr/bin/podman run \
+	-ti --rm \
+	-v /??...??/dist-git-to-source-git/dist2src:/usr/local/lib/python3.6/site-packages/dist2src:Z \
+	-v /??...??/dist-git-to-source-git/packitpatch:/usr/bin/packitpatch:Z \
+	-v /??...??/dist-git-to-source-git/macros.packit:/usr/lib/rpm/macros.d/macros.packit:Z \
+	-v /??...??/dist-git-to-source-git/tests:/tests:Z \
+	--entrypoint= \
+	-u 1000 \
+	 \
+	dist2src pytest --color=yes --showlocals -vv /tests/test_convert.py::test_conversions[rpm-c8s]
+============================ test session starts =============================
+platform linux -- Python 3.6.8, pytest-6.0.1, py-1.9.0, pluggy-0.13.1 -- /usr/bin/python3.6
 cachedir: .pytest_cache
-rootdir: /home/tt/g/packit-service/dist-git-to-source-git
-plugins: betamax-0.8.1, celery-4.3.0, cov-2.10.0
-collected 6 items
+rootdir: /tests
+collected 1 item
 
-tests/test_convert.py::test_conversions[rpm-c8s] PASSED                                 [ 16%]
+../tests/test_convert.py::test_conversions[rpm-c8s] PASSED             [100%]
 
-================================== 1 passed in 21.39 seconds ==================================
+======================= 1 passed in 15.02s =======================
 ```

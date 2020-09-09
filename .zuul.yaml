@@ -4,10 +4,10 @@
       jobs:
         - pre-commit
         - dist2src-tests
-        - dist2src-tests-inside-container
     gate:
       jobs:
         - pre-commit
+
 - job:
     # job names are global, this should be unique
     name: dist2src-tests
@@ -15,11 +15,3 @@
     attempts: 1
     description: Run tests
     run: zuul-tests.yaml
-
-- job:
-    # job names are global, this should be unique
-    name: dist2src-tests-inside-container
-    parent: base
-    attempts: 1
-    description: Run tests
-    run: zuul-tests-inside-container.yaml

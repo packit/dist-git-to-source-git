@@ -56,8 +56,8 @@ check-in-container:
 		-v $(CURDIR)/dist2src:/usr/local/lib/python3.6/site-packages/dist2src:Z \
 		-v $(CURDIR)/packitpatch:/usr/bin/packitpatch:Z \
 		-v $(CURDIR)/macros.packit:/usr/lib/rpm/macros.d/macros.packit:Z \
-		-v $(CURDIR)/tests_localhost:/tests_localhost:Z \
+		-v $(CURDIR)/tests:/tests:Z \
 		--entrypoint= \
 		-u $(shell id -u) \
 		$(OPTS) \
-		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv /tests_localhost
+		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv /$(TEST_TARGET)
