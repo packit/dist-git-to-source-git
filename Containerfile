@@ -15,9 +15,11 @@ RUN $package_manager -y install \
     make \
     autoconf \
     automake \
+    gettext-devel \
+    sscg \
+    libtool \
     && $package_manager -y clean all \
     && pip3 install ipdb pytest
-
 
 RUN git config --system user.name "Packit" && git config --system user.email "packit"
 COPY .git /src/.git

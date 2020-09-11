@@ -59,9 +59,9 @@ def get_hook(package_name: str, hook_name: str) -> Optional[str]:
 def get_build_dir(path: Path):
     build_dirs = [d for d in (path / "BUILD").iterdir() if d.is_dir()]
     if len(build_dirs) > 1:
-        raise RuntimeError(f"More than one directory found in {path}")
+        raise RuntimeError(f"More than one directory found in {path / 'BUILD'}")
     if len(build_dirs) < 1:
-        raise RuntimeError(f"No subdirectory found in {path}")
+        raise RuntimeError(f"No subdirectory found in {path / 'BUILD'}")
     return build_dirs[0]
 
 
