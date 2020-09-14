@@ -174,15 +174,19 @@ class Dist2Src:
         self.source_git_path = source_git_path
         self.source_git = GitRepo(source_git_path, create=True)
         self.log_level = log_level
+        self._dist_git_spec = None
 
     @property
     def dist_git_spec(self):
+        if self._dist_git_spec:
+            return self._dist_git_spec
         if not self.dist_git_path:
             raise RuntimeError("dist_git_path not defined")
-        return Specfile(
+        self._dist_git_spec = Specfile(
             self.dist_git_path / self.relative_specfile_path,
             sources_dir=self.dist_git_path / "SOURCES/",
         )
+        return self._dist_git_spec
 
     @property
     def package_name(self):
