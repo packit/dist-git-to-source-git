@@ -135,7 +135,11 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
 
 
 @pytest.mark.parametrize(
-    "package_name,branch,old_version", [("rpm", "c8s", "imports/c8s/rpm-4.14.2-37.el8")]
+    "package_name,branch,old_version",
+    [
+        ("rpm", "c8s", "imports/c8s/rpm-4.14.2-37.el8"),
+        ("systemd", "c8s", "imports/c8/systemd-239-13.el8_0.3"),
+    ],
 )
 def test_update_source(tmp_path: Path, package_name, branch, old_version):
     dist_git_path = tmp_path / "d" / package_name
