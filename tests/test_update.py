@@ -64,7 +64,6 @@ def test_update(tmp_path: Path, package_name, branch):
         subprocess.check_call(
             [
                 "mock",
-                "--rpmbuild-opts=-bp",
                 "--rebuild",
                 "-r",
                 "centos-stream-x86_64",
@@ -127,7 +126,6 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
         subprocess.check_call(
             [
                 "mock",
-                "--rpmbuild-opts=-bp",
                 "--rebuild",
                 "-r",
                 "centos-stream-x86_64",
@@ -186,7 +184,6 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
         subprocess.check_call(
             [
                 "mock",
-                "--rpmbuild-opts=-bp",
                 "--rebuild",
                 "-r",
                 "centos-stream-x86_64",

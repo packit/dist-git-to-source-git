@@ -57,7 +57,6 @@ def test_conversions(tmp_path: Path, package_name, branch):
         subprocess.check_call(
             [
                 "mock",
-                "--rpmbuild-opts=-bp",
                 "--rebuild",
                 "-r",
                 "centos-stream-x86_64",
