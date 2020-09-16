@@ -3,25 +3,16 @@
 
 import subprocess
 from pathlib import Path
-from click.testing import CliRunner
 
 import pytest
 
-from dist2src.cli import cli
-from packit.cli.packit_base import packit_base
-from packit.utils import cwd
-
-
-def run_dist2src(*args, working_dir=None, **kwargs):
-    working_dir = working_dir or Path()
-    with cwd(working_dir):
-        cli_runner = CliRunner()
-        cli_runner.invoke(cli, *args, catch_exceptions=False, **kwargs)
-
-
-def run_packit(*args, **kwargs):
-    cli_runner = CliRunner()
-    cli_runner.invoke(packit_base, *args, catch_exceptions=False, **kwargs)
+from tests.conftest import (
+    MOCK_BUILD,
+    TEST_PROJECTS_WITH_BRANCHES,
+    TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT,
+    run_dist2src,
+    run_packit,
+)
 
 
 def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
@@ -42,45 +33,7 @@ def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
 
 @pytest.mark.parametrize(
     "package_name,branch",
-    (
-        ("rpm", "c8s"),  # %autosetup and lots of patches
-        ("drpm", "c8s"),  # easy
-        ("HdrHistogram_c", "c8s"),  # eaaaaasy
-        ("units", "c8"),  # autosetup + files created during %prep
-        # %autosetup -S git_am + needs https://koji.mbox.centos.org/koji/taginfo?tagID=342
-        ("pacemaker", "c8s"),
-        ("systemd", "c8s"),  # -S git_am
-        # ("kernel", "c8s"),  # !!!
-        (
-            "qemu-kvm",
-            "c8s-stream-rhel",
-        ),  # %setup -q -n qemu-%{version} + %autopatch -p1
-        (
-            "libvirt",
-            "c8s-stream-rhel",
-        ),  # %autosetup -S git_am -N + weirdness + %autopatch
-        # ( "libreport", "c8s")  # -S git, they redefine "__scm_apply_git"
-        ("socat", "c8s"),  # %setup + %patch
-        ("vhostmd", "c8s"),  # -S git, eazy
-        ("autogen", "c8s"),
-        ("autofs", "c8s"),
-        ("NetworkManager", "c8s"),
-        ("dnf", "c8s"),
-        ("podman", "c8s-stream-rhel8"),
-        ("acpica-tools", "c8"),
-        # alsa-lib has an empty patch file, we need support in packit for that
-        # https://bugzilla.redhat.com/show_bug.cgi?id=1875768
-        # https://github.com/packit/packit/issues/957
-        # ("alsa-lib", "c8s"),
-        # no %prep lol, https://github.com/packit/dist-git-to-source-git/issues/46
-        # ("appstream-data", "c8s"),
-        ("apr", "c8s"),
-        ("arpwatch", "c8s"),
-        # ("atlas", "c8s")  # insanity + requires lapack-devel to be present while converting
-        ("bind", "c8s"),
-        ("boom-boot", "c8s"),
-        ("boost", "c8s"),  # %setup + find + %patch
-    ),
+    TEST_PROJECTS_WITH_BRANCHES + TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT,
 )
 def test_conversions(tmp_path: Path, package_name, branch):
     dist_git_path = tmp_path / "d" / package_name
@@ -100,15 +53,13 @@ def test_conversions(tmp_path: Path, package_name, branch):
     )
     srpm_path = next(sg_path.glob("*.src.rpm"))
     assert srpm_path.exists()
-    # TODO: implement `packit prep` and run it here
-    return
-    subprocess.check_call(
-        [
-            "mock",
-            "--rpmbuild-opts=-bp",
-            "--rebuild",
-            "-r",
-            "centos-stream-x86_64",
-            srpm_path,
-        ]
-    )
+    if MOCK_BUILD:
+        subprocess.check_call(
+            [
+                "mock",
+                "--rebuild",
+                "-r",
+                "centos-stream-x86_64",
+                srpm_path,
+            ]
+        )
