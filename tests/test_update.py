@@ -47,7 +47,9 @@ def test_update(tmp_path: Path, package_name, branch):
         cwd=dist_git_path,
     )
 
-    run_dist2src(["-vvv", "update", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"])
+    run_dist2src(
+        ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
+    )
 
     run_packit(
         [
@@ -99,7 +101,9 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     sg_repo = git.Repo(path=sg_path)
     first_round_commits = list(sg_repo.iter_commits("sg-start..HEAD"))
 
-    run_dist2src(["-vvv", "update", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"])
+    run_dist2src(
+        ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
+    )
 
     second_round_commits = list(sg_repo.iter_commits("sg-start..HEAD"))
 
@@ -171,7 +175,9 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
         cwd=dist_git_path,
     )
 
-    run_dist2src(["-vvv", "update", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"])
+    run_dist2src(
+        ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
+    )
 
     run_packit(
         [

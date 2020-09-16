@@ -191,6 +191,8 @@ def convert(ctx, origin: str, dest: str):
     """Convert a dist-git repository into a source-git repository, using
     'rpmbuild' and executing the "%prep" stage from the spec file.
 
+    Update if the branch exists.
+
     ORIGIN and DEST are in the format of
 
         REPO_PATH:BRANCH
@@ -205,33 +207,13 @@ def convert(ctx, origin: str, dest: str):
         source_git_path=Path(dest_dir),
         log_level=ctx.obj[VERBOSE_KEY],
     )
-    d2s.convert(origin_branch, dest_branch)
-
-
-@cli.command("update")
-@click.argument("origin", type=click.STRING)
-@click.argument("dest", type=click.STRING)
-@log_call
-@click.pass_context
-def update(ctx, origin: str, dest: str):
-    """Update existing source-git repository from a dist-git repository,
-     using 'rpmbuild' and executing the "%prep" stage from the spec file.
-
-    ORIGIN and DEST are in the format of
-
-        REPO_PATH:BRANCH
-
-    Set DIST2SRC_GET_SOURCES to the path to get_sources.sh, if it's not
-    in the PATH.
-    """
-    origin_dir, origin_branch = origin.split(":")
-    dest_dir, dest_branch = dest.split(":")
-    d2s = Dist2Src(
-        dist_git_path=Path(origin_dir),
-        source_git_path=Path(dest_dir),
-        log_level=ctx.obj[VERBOSE_KEY],
-    )
-    d2s.update_source_git(origin_branch, dest_branch)
+    if d2s.source_git_path.exists() and dest_branch in d2s.source_git.repo.branches:
+        logger.info(
+            "The source-git repository and branch exist. Updating existing source-git..."
+        )
+        d2s.update_source_git(origin_branch, dest_branch)
+    else:
+        d2s.convert(origin_branch, dest_branch)
 
 
 if __name__ == "__main__":
