@@ -41,6 +41,7 @@ TEST_PROJECTS_WITH_BRANCHES = [
     ("bind", "c8s"),
     ("boom-boot", "c8s"),
     ("boost", "c8s"),  # %setup + find + %patch
+    # ("google-noto-cjk-fonts", "c8s")  # archive 1.8G, repo ~4G
     ("python-rpm-generators", "c8s"),  # keine upstream archive, luckily %autosetup
 ]
 
