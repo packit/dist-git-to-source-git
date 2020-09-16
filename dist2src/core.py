@@ -107,10 +107,12 @@ class GitRepo:
         else:
             self.repo.git.checkout(branch, force=True)
 
-    def commit(self, message: str):
+    def commit(self, message: str, body: Optional[str] = None):
         """Commit staged changes in GITDIR."""
-        # some of the commits may be empty and it's not an error, e.g. extra source files
-        self.repo.git.commit("--allow-empty", m=message)
+        other_message_kwargs = {"message": body} if body else {}
+        # some of the commits may be empty and it's not an error,
+        # e.g. extra source files
+        self.repo.git.commit(allow_empty=True, m=message, **other_message_kwargs)
 
     def commit_all(self, message: str):
         if self.repo.is_dirty():
@@ -159,12 +161,17 @@ class GitRepo:
         )
         self.repo.git.cherry_pick(f"{from_branch}~{num_commits - 1}", **git_options)
 
-    def revert_to_ref(self, ref, message=None):
-        message = message or f"Revert the state to {ref}"
+    def revert_to_ref(
+        self,
+        ref,
+        commit_message: Optional[str] = None,
+        commit_body: Optional[str] = None,
+    ):
+        commit_message = commit_message or f"Revert the state to {ref}"
         # https://git-scm.com/book/en/v2/Git-Tools-Reset-Demystified
         # Reset index without changing HEAD
         self.repo.git.reset(ref, ".")
-        self.commit(message)
+        self.commit(commit_message, body=commit_body)
         # clear the working-tree
         self.repo.git.reset("HEAD", hard=True)
 
@@ -483,7 +490,12 @@ class Dist2Src:
         )
         self.source_git.checkout(dest_branch)
         self.source_git.checkout(branch=new_dest_branch, create_branch=True)
-        self.source_git.revert_to_ref(START_TAG, message="Prepare for a new update")
+        self.source_git.revert_to_ref(
+            START_TAG,
+            commit_message="Prepare for a new update",
+            commit_body="Reverting patches so we can apply the latest update\n"
+            "and changes can be seen in the spec file and sources.",
+        )
         self.convert(origin_branch=origin_branch, dest_branch=new_dest_branch)
 
         # fast-forward old branch
