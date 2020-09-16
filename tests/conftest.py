@@ -41,6 +41,7 @@ TEST_PROJECTS_WITH_BRANCHES = [
     ("bind", "c8s"),
     ("boom-boot", "c8s"),
     ("boost", "c8s"),  # %setup + find + %patch
+    ("python-rpm-generators", "c8s"),  # keine upstream archive, luckily %autosetup
 ]
 
 TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT = [
