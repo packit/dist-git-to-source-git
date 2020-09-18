@@ -61,5 +61,6 @@ check-in-container:
 		-v $(CURDIR)/tests:/tests:Z \
 		--entrypoint= \
 		-u $(shell id -u) \
+		-w / \
 		$(OPTS) \
-		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv /$(TEST_TARGET)
+		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv $(TEST_TARGET)
