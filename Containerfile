@@ -9,7 +9,10 @@ ENV package_manager ${package_manager:-yum -y}
 RUN $package_manager -y install gcc git krb5-devel python3-devel python3-pip rpm-build && $package_manager -y clean all
 RUN curl --output /usr/bin/get_sources.sh https://git.centos.org/centos-git-common/raw/master/f/get_sources.sh && chmod +x /usr/bin/get_sources.sh
 # Tools required by the %prep section of some packages
-RUN $package_manager -y install \
+# PowerTools repo installed for gtk-doc
+RUN $package_manager -y install dnf-plugins-core && \
+    $package_manager config-manager --set-enabled PowerTools && \
+    $package_manager -y install \
     bison \
     flex \
     make \
@@ -18,6 +21,10 @@ RUN $package_manager -y install \
     gettext-devel \
     sscg \
     libtool \
+    dos2unix \
+    gtk-doc \
+    perl-devel \
+    rubygems \
     && $package_manager -y clean all \
     && pip3 install ipdb pytest
 
