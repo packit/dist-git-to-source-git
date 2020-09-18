@@ -1,6 +1,6 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
-
+import os
 import subprocess
 from pathlib import Path
 
@@ -41,6 +41,7 @@ def test_conversions(tmp_path: Path, package_name, branch):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
     convert_repo(package_name, dist_git_path, sg_path, branch=branch)
+    os.chdir(sg_path)
 
     run_packit(
         [
