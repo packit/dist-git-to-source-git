@@ -65,6 +65,9 @@ def run_dist2src(*args, working_dir=None, **kwargs):
     working_dir = working_dir or Path.cwd()
     with cwd(working_dir):
         cli_runner = CliRunner()
+        # if you want to run debugger inside you need to do 2 things:
+        # get real std{in,out} at the level of imports because click patches it
+        # invoke pdb like this: "import pdb; pdb.Pdb(stdin=stdin, stdout=stdout).set_trace()"
         cli_runner.invoke(cli, *args, catch_exceptions=False, **kwargs)
 
 
