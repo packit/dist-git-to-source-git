@@ -25,6 +25,7 @@ RUN $package_manager -y install dnf-plugins-core && \
     gtk-doc \
     perl-devel \
     rubygems \
+    && $package_manager --enablerepo=PowerTools --setopt=PowerTools.module_hotfixes=true install javapackages-local \
     && $package_manager -y clean all \
     && pip3 install ipdb pytest
 
