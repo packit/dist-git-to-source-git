@@ -50,6 +50,8 @@ run:
 check:
 	pytest-3 --color=$(COLOR) --showlocals -vv $(TEST_TARGET)
 
+# if you want to inspect repos which are created during a test run, do `-v /tmp:/tmp` and navigate to /tmp/pytest*/...
+# sadly this doesn't work in CI (SELinux?)
 check-in-container:
 	$(CONTAINER_ENGINE) run \
 		-ti --rm \
@@ -59,5 +61,6 @@ check-in-container:
 		-v $(CURDIR)/tests:/tests:Z \
 		--entrypoint= \
 		-u $(shell id -u) \
+		-w / \
 		$(OPTS) \
-		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv /$(TEST_TARGET)
+		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv $(TEST_TARGET)

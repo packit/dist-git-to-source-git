@@ -41,6 +41,8 @@ TEST_PROJECTS_WITH_BRANCHES = [
     ("bind", "c8s"),
     ("boom-boot", "c8s"),
     ("boost", "c8s"),  # %setup + find + %patch
+    # ("google-noto-cjk-fonts", "c8s")  # archive 1.8G, repo ~4G
+    ("python-rpm-generators", "c8s"),  # keine upstream archive, luckily %autosetup
 ]
 
 TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT = [
@@ -63,6 +65,9 @@ def run_dist2src(*args, working_dir=None, **kwargs):
     working_dir = working_dir or Path.cwd()
     with cwd(working_dir):
         cli_runner = CliRunner()
+        # if you want to run debugger inside you need to do 2 things:
+        # get real std{in,out} at the level of imports because click patches it
+        # invoke pdb like this: "import pdb; pdb.Pdb(stdin=stdin, stdout=stdout).set_trace()"
         cli_runner.invoke(cli, *args, catch_exceptions=False, **kwargs)
 
 

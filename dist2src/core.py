@@ -11,6 +11,7 @@ from typing import List, Optional, Dict, Any, Union
 
 import git
 import sh
+from git import GitCommandError
 from packit.specfile import Specfile
 from yaml import dump
 
@@ -159,7 +160,13 @@ class GitRepo:
             if theirs
             else {}
         )
-        self.repo.git.cherry_pick(f"{from_branch}~{num_commits - 1}", **git_options)
+        try:
+            self.repo.git.cherry_pick(f"{from_branch}~{num_commits - 1}", **git_options)
+        except GitCommandError as ex:
+            if "nothing to commit" in str(ex):
+                self.commit(message="Base commit: empty - no source archive")
+            else:
+                raise
 
     def revert_to_ref(
         self,
