@@ -1,0 +1,14 @@
+---
+# Openshift project/namespace name
+project: dist2src-update
+
+# Openshift cluster url
+host: https://api.ocp4.prod.psi.redhat.com:6443
+
+# Openshift API key, please define in vars/main.yml
+api_key: ""
+validate_certs: yes
+push_dev_images: false
+image_worker: docker.io/usercont/dist2src-worker
+worker_replicas: 1
+container_engine: "{{ lookup('pipe', 'command -v podman 2> /dev/null || echo docker') }}"

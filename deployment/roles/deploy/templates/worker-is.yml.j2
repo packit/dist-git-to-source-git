@@ -1,0 +1,21 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+# https://docs.openshift.com/container-platform/4.5/openshift_images/image-streams-manage.html
+kind: ImageStream
+apiVersion: v1
+metadata:
+  name: dist2src-worker
+spec:
+  tags:
+    - name: latest
+      from:
+        kind: DockerImage
+        name: {{ image_worker }}
+      importPolicy:
+        # Periodically query registry to synchronize tag and image metadata.
+        scheduled: true
+  lookupPolicy:
+    # allows all resources pointing to this image stream to use it in the image field
+    local: true

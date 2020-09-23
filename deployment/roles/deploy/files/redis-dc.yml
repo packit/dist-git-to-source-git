@@ -1,0 +1,38 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+kind: DeploymentConfig
+apiVersion: v1
+metadata:
+  name: redis
+  labels:
+    service: redis
+spec:
+  selector:
+    service: redis
+  template:
+    metadata:
+      labels:
+        service: redis
+        name: redis
+    spec:
+      containers:
+        - name: redis
+          image: registry.fedoraproject.org/f31/redis
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - mountPath: "/var/lib/redis/data"
+              name: redis-pv
+          resources:
+            limits:
+              memory: "80Mi"
+              cpu: "100m"
+      volumes:
+        - name: redis-pv
+          persistentVolumeClaim:
+            claimName: redis-pvc
+  replicas: 1
+  strategy:
+    type: Recreate
