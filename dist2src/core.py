@@ -276,8 +276,8 @@ class Dist2Src:
             return
 
         for i, line in enumerate(prep_lines):
-            if line.startswith(("%autosetup", "%autopatch")):
-                logger.info("This package uses %autosetup or %autopatch.")
+            if line.startswith(("%autosetup", "%autopatch", "%patch")):
+                logger.info("This package uses %autosetup or %[auto]patch.")
                 # cool, we're good
                 return
             elif line.startswith("%setup"):
