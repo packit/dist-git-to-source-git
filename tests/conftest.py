@@ -43,6 +43,12 @@ TEST_PROJECTS_WITH_BRANCHES = [
     ("boost", "c8s"),  # %setup + find + %patch
     # ("google-noto-cjk-fonts", "c8s")  # archive 1.8G, repo ~4G
     ("python-rpm-generators", "c8s"),  # keine upstream archive, luckily %autosetup
+    # big dawg: conditional arch patches, %setup -a 1 -a 2, patching additional archives
+    # ("gcc", "c8s"),
+    ("bpftrace", "c8s"),  # conditional patching
+    ("gdb", "c8s"),  # conditional patching
+    ("sqlite", "c8s"),  # conditional patching
+    ("zlib", "c8s"),  # conditional patching
 ]
 
 TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT = [
