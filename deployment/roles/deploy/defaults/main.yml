@@ -15,6 +15,9 @@ validate_certs: yes
 push_dev_images: false
 
 image_worker: docker.io/usercont/dist2src-worker
+
+image_centosmsg: docker.io/usercont/packit-service-centosmsg:prod
+
 # How many workers
 worker_replicas: 1
 

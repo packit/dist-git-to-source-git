@@ -21,6 +21,9 @@ The folder should contain the following files:
 
 - Sentry DSN (Data Source Name):
   - `sentry_dsn`
+- Certificates needed by centosmsg listener:
+  - `centos.cert`
+  - `centos-server-ca.cert`
 
 ## License
 

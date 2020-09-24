@@ -1,0 +1,19 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+# https://docs.openshift.com/container-platform/4.5/openshift_images/image-streams-manage.html
+kind: ImageStream
+apiVersion: v1
+metadata:
+  name: dist2src-centosmsg
+spec:
+  tags:
+    - name: latest
+      from:
+        kind: DockerImage
+        name: {{ image_centosmsg }}
+      importPolicy:
+        scheduled: true
+  lookupPolicy:
+    local: true

@@ -9,5 +9,9 @@
     - command: "{{ container_engine }} inspect {{ image_worker }}"
     - command: "{{ container_engine }} tag {{ image_worker }} 172.30.1.1:5000/myproject/dist2src-worker"
     - command: "{{ container_engine }} push 172.30.1.1:5000/myproject/dist2src-worker {{ tls_verify_false }}"
+    - command: "{{ container_engine }} inspect {{ image_centosmsg }}"
+    - command: "{{ container_engine }} tag {{ image_centosmsg }} 172.30.1.1:5000/myproject/dist2src-centosmsg"
+    - command: "{{ container_engine }} push 172.30.1.1:5000/myproject/dist2src-centosmsg {{ tls_verify_false }}"
   tags:
     - worker
+    - centosmsg
