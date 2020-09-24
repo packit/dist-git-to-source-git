@@ -1,0 +1,16 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+- name: Deploy worker
+  k8s:
+    namespace: "{{ project }}"
+    resource_definition: "{{ item }}"
+    host: "{{ host }}"
+    api_key: "{{ api_key }}"
+    validate_certs: "{{ validate_certs }}"
+  with_template:
+    - worker-is.yml.j2
+    - worker-sts.yml.j2
+  tags:
+    - worker

@@ -1,0 +1,18 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+- name: Deploy redis
+  k8s:
+    namespace: "{{ project }}"
+    resource_definition: "{{ item }}"
+    host: "{{ host }}"
+    api_key: "{{ api_key }}"
+    validate_certs: "{{ validate_certs }}"
+    apply: yes
+  with_file:
+    - redis-pvc.yml
+    - redis-dc.yml
+    - redis-service.yml
+  tags:
+    - redis

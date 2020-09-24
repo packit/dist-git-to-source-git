@@ -1,0 +1,9 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+- include: ./check-api-token.yml
+- include: ./push-dev-images.yml
+  when: push_dev_images
+- include: ./deploy-redis.yml
+- include: ./deploy-worker.yml

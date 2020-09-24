@@ -1,0 +1,55 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+# https://kubernetes.io/docs/concepts/workloads/controllers/statefulset
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: dist2src-worker
+  annotations:
+    # Setting triggers to StatefulSet is tricky (they also don't appear in GUI).
+    # I run the following and then checked how the resulting yaml looks like.
+    # oc set triggers statefulset.apps/dist2src-worker --from-image=dist2src-worker:latest -c dist2src-worker-1
+    image.openshift.io/triggers: >-
+      [{"from":{"kind":"ImageStreamTag","name":"dist2src-worker:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"dist2src-worker-1\")].image"}]
+spec:
+  selector:
+    matchLabels:
+      # has to match .spec.template.metadata.labels
+      name: dist2src-worker
+      app: dist2src
+  serviceName: "dist2src-worker"
+  replicas: {{ worker_replicas }}
+  updateStrategy.type: RollingUpdate
+  podManagementPolicy: OrderedReady
+  template:
+    metadata:
+      labels:
+        name: dist2src-worker
+        app: dist2src
+      # https://docs.openshift.com/container-platform/3.11/dev_guide/managing_images.html#using-is-with-k8s
+      annotations:
+        alpha.image.policy.openshift.io/resolve-names: '*'
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: dist2src-worker
+          image: dist2src-worker:latest
+          env:
+            - name: APP
+              value: dist2src_service.worker.tasks
+          command:
+            - "/usr/bin/run_worker.sh"
+          resources:
+            limits:
+              memory: "384Mi"
+              cpu: "400m"
+  volumeClaimTemplates:
+    - metadata:
+        name: dist2src-worker-vol
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi

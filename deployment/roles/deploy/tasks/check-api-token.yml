@@ -1,0 +1,16 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+- block:
+    - name: get kubeconfig token
+      command: oc whoami -t
+      register: kubeconfig_token
+    - name: check if tokens match
+      assert:
+        that:
+          - kubeconfig_token.stdout == api_key
+        msg: "OpenShift API token defined in vars/ does not match token from your current environment."
+  ignore_errors: yes
+  tags:
+    - always
