@@ -70,5 +70,7 @@ check-in-container:
 		$(OPTS) \
 		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv $(TEST_TARGET)
 
+# example:
+# DEPLOYMENT=local make deploy TAGS=worker
 deploy:
 	$(AP) deployment/deploy.yml --tags $(TAGS)
