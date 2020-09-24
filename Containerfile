@@ -28,6 +28,9 @@ RUN $package_manager -y install dnf-plugins-core && \
     && $package_manager --enablerepo=PowerTools --setopt=PowerTools.module_hotfixes=true install javapackages-local \
     && $package_manager -y clean all \
     && pip3 install ipdb pytest
+# we need https://github.com/packit/packit/pull/972
+# wait for packit 0.17 to be released
+RUN pip3 install --upgrade setuptools && pip3 install wheel && pip3 install git+https://github.com/packit/packit
 
 RUN git config --system user.name "Packit" && git config --system user.email "packit"
 COPY .git /src/.git

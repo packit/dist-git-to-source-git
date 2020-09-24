@@ -7,11 +7,12 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any, Union, Set
 
 import git
 import sh
 from git import GitCommandError
+from packit.patches import PatchMetadata
 from packit.specfile import Specfile
 from yaml import dump
 
@@ -382,6 +383,7 @@ class Dist2Src:
         self.source_git.commit(message="Add spec-file for the distribution")
 
         self.copy_all_sources()
+        self.copy_conditional_patches()
         self.source_git.stage(add="SPECS")
         self.source_git.commit(message="Add sources defined in the spec file")
 
@@ -428,6 +430,34 @@ class Dist2Src:
             file_dest = sg_path / Path(file_).name
             logger.debug(f"copying {file_} to {file_dest}")
             shutil.copy2(file_, file_dest)
+
+    def copy_conditional_patches(self):
+        """
+        for patches which are applied in conditions
+        and the condition is evaluated to false during conversion,
+        we cannot create a SRPM because rpmbuild wants the patch files present
+        and obviously packit dones't know how to create those
+
+        this method copies all patch files which are defined and are not in the patch metadata
+        """
+        patch_files_in_commits: Set[str] = set()
+
+        BUILD_git_path = get_build_dir(self.dist_git_path).absolute()
+        BUILD_git = git.Repo(BUILD_git_path)
+        for commit in BUILD_git.iter_commits():
+            p = PatchMetadata.from_commit(commit, None)
+            if p.present_in_specfile:  # base commit doesn't have any metadata
+                patch_files_in_commits.add(p.name)
+
+        all_defined_patches = set(
+            x.get_patch_name() for x in self.dist_git_spec.get_patches()
+        )
+
+        for patch_name in all_defined_patches - patch_files_in_commits:
+            file_src = self.dist_git_path / "SOURCES" / patch_name
+            file_dest = self.source_git_path / "SPECS" / patch_name
+            logger.debug(f"copying {file_src} to {file_dest}")
+            shutil.copy2(file_src, file_dest)
 
     def copy_spec(self):
         """

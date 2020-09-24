@@ -82,3 +82,9 @@ def test_run_prep(acl):
     assert acl.joinpath("BUILD").is_dir()
     assert acl.joinpath("BUILD").joinpath("acl-2.2.53").is_dir()
     assert acl.joinpath("BUILD").joinpath("acl-2.2.53").joinpath(".git").is_dir()
+
+
+def test_copy_unapplied_patches(acl):
+    run_dist2src(["-v", "run-prep", str(acl)], working_dir=acl)
+    d2s = Dist2Src(dist_git_path=acl, source_git_path=None)
+    d2s.copy_conditional_patches()
