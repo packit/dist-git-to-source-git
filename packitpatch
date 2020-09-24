@@ -6,10 +6,14 @@
 # do set -x for development/debugging
 set -eu
 
+# this will print a path to a git repo
+# correct repo is /path/BUILD/<TOP-LEVEL-DIR-IN-ARCHIVE>
+top_level_git_path=$(git rev-parse --show-toplevel)
+second_to_last_dir=$(basename $(dirname ${top_level_git_path}))
 # we cannot override %__scm_setup_patch b/c it is called from %autosetup
 # and some specs have %setup + %autopatch, so we need to make sure
 # the git repo exists here
-if [ ! -d .git ]; then
+if [ $second_to_last_dir != "BUILD" ]; then
   git init
   git add .
   # that PWD magic prints the name of the PWD, which usually is NAME-VERSION
