@@ -5,5 +5,6 @@
 - include: ./check-api-token.yml
 - include: ./push-dev-images.yml
   when: push_dev_images
+- include: ./deploy-secrets.yml
 - include: ./deploy-redis.yml
 - include: ./deploy-worker.yml
