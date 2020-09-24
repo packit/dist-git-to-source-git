@@ -214,10 +214,12 @@ class Dist2Src:
                                 where the conversion output will land
         @param log_level: int, 0 minimal output, 1 verbose, 2 debug
         """
-        self.dist_git_path = dist_git_path
-        self.dist_git = GitRepo(dist_git_path)
-        self.source_git_path = source_git_path
-        self.source_git = GitRepo(source_git_path, create=True)
+        # we are using absolute paths since we do pushd below before running rpmbuild
+        # and in that case relative paths no longer work
+        self.dist_git_path = dist_git_path.absolute() if dist_git_path else None
+        self.dist_git = GitRepo(self.dist_git_path)
+        self.source_git_path = source_git_path.absolute() if source_git_path else None
+        self.source_git = GitRepo(self.source_git_path, create=True)
         self.log_level = log_level
         self._dist_git_spec = None
 
