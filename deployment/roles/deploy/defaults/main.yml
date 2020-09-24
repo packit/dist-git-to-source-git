@@ -5,10 +5,18 @@ project: dist2src-update
 # Openshift cluster url
 host: https://api.ocp4.prod.psi.redhat.com:6443
 
-# Openshift API key, please define in vars/main.yml
+# Openshift API key, please define in vars/*.yml
 api_key: ""
+
+# Set to 'no' when deploying to local cluster
 validate_certs: yes
+
+# Set to 'true' when deploying to local cluster
 push_dev_images: false
+
 image_worker: docker.io/usercont/dist2src-worker
+# How many workers
 worker_replicas: 1
+
 container_engine: "{{ lookup('pipe', 'command -v podman 2> /dev/null || echo docker') }}"
+deployment: "{{ lookup('env', 'DEPLOYMENT') or 'main' }}"

@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 ---
-- include: ./check-api-token.yml
-- include: ./push-dev-images.yml
+- include_vars: "{{ deployment }}.yml"
+- include_tasks: ./check-api-token.yml
+- include_tasks: ./push-dev-images.yml
   when: push_dev_images
-- include: ./deploy-secrets.yml
-- include: ./deploy-redis.yml
-- include: ./deploy-worker.yml
+- include_tasks: ./deploy-secrets.yml
+- include_tasks: ./deploy-redis.yml
+- include_tasks: ./deploy-worker.yml
