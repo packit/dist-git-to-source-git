@@ -41,6 +41,7 @@ TEST_PROJECTS_WITH_BRANCHES = [
     # ("gcc", "c8s"),
     ("gdb", "c8s"),  # conditional patching, a ton of if's and addition of more sources
     ("sqlite", "c8s"),  # conditional patching + autoconf
+    ("haproxy", "c8s"),  # they ignore our files
 ]
 
 TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT = [

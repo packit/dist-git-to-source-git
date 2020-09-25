@@ -137,7 +137,7 @@ class GitRepo:
         if exclude:
             exclude = f":(exclude){exclude}"
             logger.debug(exclude)
-        self.repo.git.add(add or ".", exclude)
+        self.repo.git.add(add or ".", "-f", exclude)
 
     def create_tag(self, tag, branch):
         """Create a Git TAG at the tip of BRANCH"""
