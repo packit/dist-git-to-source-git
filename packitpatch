@@ -19,7 +19,7 @@ if [ $second_to_last_dir != "BUILD" ]; then
   # https://github.com/packit/dist-git-to-source-git/issues/66#issuecomment-694284493
   git add -f .
   # that PWD magic prints the name of the PWD, which usually is NAME-VERSION
-  git commit --allow-empty -a -m "${PWD##*/} base"
+  git commit -q --allow-empty -a -m "${PWD##*/} base"
 fi
 
 if [ "$1" == "%{1}" ]; then
