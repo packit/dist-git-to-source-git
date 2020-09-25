@@ -11,11 +11,6 @@ CONTAINER_ENGINE ?= $(shell command -v podman 2> /dev/null || echo docker)
 CONTAINER_CMD ?= /bin/bash
 TEST_TARGET ?= ./tests
 COLOR ?= yes
-ANSIBLE_PYTHON := /usr/bin/python3
-AP := ansible-playbook -vv -c local -i localhost, -e ansible_python_interpreter=$(ANSIBLE_PYTHON)
-# "By default, Ansible runs as if --tags all had been specified."
-# https://docs.ansible.com/ansible/latest/user_guide/playbooks_tags.html#special-tags
-TAGS ?= all
 
 usage:
 	@echo "Run 'make convert' to run the convert or 'make clean' to clean up things."
@@ -73,4 +68,4 @@ check-in-container:
 # example:
 # DEPLOYMENT=local make deploy TAGS=worker
 deploy:
-	$(AP) deployment/deploy.yml --tags $(TAGS)
+	make -C deployment deploy
