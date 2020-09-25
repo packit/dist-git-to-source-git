@@ -12,16 +12,17 @@ from tests.test_convert import run_dist2src
 this_dir = Path(__file__).parent
 data_dir = this_dir / "data"
 acl_template = data_dir / "acl"
+meanwhile_template = data_dir / "meanwhile"
 
 
-def fetch_acl_archive(path: Path):
+def fetch_acl_archive(path: Path, archivne_name: str, url_suffix: str):
     """
     fetch the archive once, have it git-ignored so
     we only do a single HTTP query per CI session
     """
     sources_dir = path / "SOURCES"
     sources_dir.mkdir(exist_ok=True, parents=True)
-    archive_path = sources_dir / "acl-2.2.53.tar.gz"
+    archive_path = sources_dir / archivne_name
     if archive_path.is_file():
         return
     subprocess.check_call(
@@ -30,7 +31,7 @@ def fetch_acl_archive(path: Path):
             "-sv",  # -s no progress, -v print something
             "-o",
             str(archive_path),
-            "https://git.centos.org/sources/acl/c8/6c9e46602adece1c2dae91ed065899d7f810bf01",
+            f"https://git.centos.org/sources/{url_suffix}",
         ],
         cwd=path,
     )
@@ -39,8 +40,27 @@ def fetch_acl_archive(path: Path):
 @pytest.fixture()
 def acl(tmp_path: Path):
     dist_git_root = tmp_path / "d" / "acl"
-    fetch_acl_archive(path=acl_template)
+    fetch_acl_archive(
+        path=acl_template,
+        archivne_name="acl-2.2.53.tar.gz",
+        url_suffix="acl/c8/6c9e46602adece1c2dae91ed065899d7f810bf01",
+    )
     acl_path = shutil.copytree(acl_template, dist_git_root)
+    subprocess.check_call(["git", "init", "."], cwd=acl_path)
+    subprocess.check_call(["git", "add", "."], cwd=acl_path)
+    subprocess.check_call(["git", "commit", "-m", "Initial import"], cwd=acl_path)
+    return acl_path
+
+
+@pytest.fixture()
+def meanwhile(tmp_path: Path):
+    dist_git_root = tmp_path / "d" / "meanwhile"
+    fetch_acl_archive(
+        path=meanwhile_template,
+        archivne_name="meanwhile-1.1.0.tar.gz",
+        url_suffix="meanwhile/c8/e0e82449ecde20e7499b56ac04eeaf6a2156c1ce",
+    )
+    acl_path = shutil.copytree(meanwhile_template, dist_git_root)
     subprocess.check_call(["git", "init", "."], cwd=acl_path)
     subprocess.check_call(["git", "add", "."], cwd=acl_path)
     subprocess.check_call(["git", "commit", "-m", "Initial import"], cwd=acl_path)
@@ -88,3 +108,32 @@ def test_copy_unapplied_patches(acl):
     run_dist2src(["-v", "run-prep", str(acl)], working_dir=acl)
     d2s = Dist2Src(dist_git_path=acl, source_git_path=None)
     d2s.copy_conditional_patches()
+
+
+def test_meanwhile_is_right(meanwhile):
+    run_dist2src(["-v", "run-prep", str(meanwhile)], working_dir=meanwhile)
+    """
+Patch0:         %{name}-crash.patch
+Patch1:         %{name}-
+Patch2:         %{name}-
+Patch3:         %{name}-
+# https://bugzilla.redhat.com/show_bug.cgi?id=1037196
+Patch4:         %{name}
+    """
+    patches = (
+        (b"meanwhile-format-security-fix.patch", False),
+        (b"meanwhile-status-timestamp-workaround.patch", False),
+        (b"meanwhile-file-transfer.patch", False),
+        (b"meanwhile-fix-glib-headers.patch", False),
+        (b"meanwhile-crash.patch", True),
+    )
+    for idx in range(5):
+        commit_content = subprocess.check_output(
+            ["git", "show", "HEAD" + "^" * idx],
+            cwd=str(meanwhile / "BUILD/meanwhile-1.1.0"),
+        )
+        assert patches[idx][0] in commit_content
+        if patches[idx][1]:
+            assert b"no_prefix: true" in commit_content
+        else:
+            assert b"no_prefix:" not in commit_content

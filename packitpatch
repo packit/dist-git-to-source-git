@@ -42,6 +42,17 @@ patch_name: ${patch_name}
 present_in_specfile: true
 EOF
 )
+
+# when patches are applied with -p0, we need to strip the prefix
+# in packit when creating the patch files
+if echo ${@:3} | grep -E "[-]p0|[-]p 0"; then
+  commit_message=$(cat << EOF
+$commit_message
+no_prefix: true
+EOF
+)
+fi
+
 if [ "$patch_id" != "%{2}" ]; then
   # concat 2 strings and separate them with \n - a nightmare to do in bash
   printf -v commit_message "${commit_message}\nlocation_in_specfile: ${patch_id}"

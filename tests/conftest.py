@@ -44,6 +44,7 @@ TEST_PROJECTS_WITH_BRANCHES = [
     ("haproxy", "c8s"),  # they ignore our files
 ]
 
+# these packages only have a single commit in the respective dist-git branch
 TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT = [
     (
         "HdrHistogram_c",
@@ -53,6 +54,7 @@ TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT = [
     ("vhostmd", "c8s"),  # -S git, eazy
     ("acpica-tools", "c8"),  # %setup, %patch, unpack %SOURCE1, a ton of operations
     ("socat", "c8s"),  # %setup + %patch # problem with  previous commit
+    ("meanwhile", "c8"),  # -p0 + -p1 patches
 ]
 
 
