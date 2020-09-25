@@ -48,5 +48,5 @@ if [ "$patch_id" != "%{2}" ]; then
 fi
 
 git add -f .
-# patches can be empty, rpmbuild if fine with it
+# patches can be empty, rpmbuild is fine with it
 git commit -m "$commit_message" --allow-empty
