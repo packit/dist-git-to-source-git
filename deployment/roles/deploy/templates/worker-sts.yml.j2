@@ -37,10 +37,16 @@ spec:
         - name: dist2src-worker
           image: dist2src-worker:latest
           env:
+            - name: DEPLOYMENT
+              value: {{ deployment }}
             - name: APP
-              value: dist2src_service.worker.tasks
-          command:
-            - "/usr/bin/run_worker.sh"
+              value: dist2src.worker.tasks
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: sentry
+                  key: dsn
+          command: ["/usr/bin/run_worker.sh"]
           resources:
             limits:
               memory: "384Mi"
