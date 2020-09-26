@@ -29,6 +29,9 @@ spec:
             limits:
               memory: "80Mi"
               cpu: "100m"
+          envFrom:
+            - configMapRef:
+                name: env-config
       volumes:
         - name: redis-pv
           persistentVolumeClaim:

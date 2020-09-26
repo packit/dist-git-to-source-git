@@ -37,8 +37,6 @@ spec:
         - name: dist2src-worker
           image: dist2src-worker:latest
           env:
-            - name: DEPLOYMENT
-              value: {{ deployment }}
             - name: APP
               value: dist2src.worker.tasks
             - name: SENTRY_DSN
@@ -46,6 +44,9 @@ spec:
                 secretKeyRef:
                   name: sentry
                   key: dsn
+          envFrom:
+            - configMapRef:
+                name: env-config
           command: ["/usr/bin/run_worker.sh"]
           resources:
             limits:

@@ -1,0 +1,14 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+# https://docs.openshift.com/container-platform/4.5/builds/builds-configmaps.html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env-config
+type: Opaque
+data:
+  DEPLOYMENT: "{{ deployment }}"
+  CELERY_TASK_NAME: "{{ celery_task_name }}"
+  REDIS_SERVICE_HOST: redis

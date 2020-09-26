@@ -7,6 +7,7 @@
 - include_tasks: ./push-dev-images.yml
   when: push_dev_images
 - include_tasks: ./deploy-secrets.yml
+- include_tasks: ./deploy-configmap.yml
 - include_tasks: ./deploy-redis.yml
 - include_tasks: ./deploy-worker.yml
 - include_tasks: ./deploy-centosmsg.yml
