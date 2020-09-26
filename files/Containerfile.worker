@@ -1,0 +1,18 @@
+# Celery worker which runs tasks from centosmsg listener
+
+FROM docker.io/usercont/base
+
+COPY files/install-deps-worker.yml /src/
+RUN ansible-playbook -vv -c local -i localhost, /src/install-deps-worker.yml \
+    && dnf clean all
+
+COPY setup.py setup.cfg files/run_worker.sh /src/
+COPY dist2src/ /src/dist2src/
+# setuptools-scm
+COPY .git /src/.git
+
+COPY files/recipe-worker.yml /src/
+RUN cd /src \
+    && ansible-playbook -vv -c local -i localhost, recipe-worker.yml
+
+CMD ["/usr/bin/run_worker.sh"]

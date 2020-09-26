@@ -7,6 +7,7 @@ PACKAGE ?= rpm
 BRANCH ?= c8s
 DIR ?= git.centos.org
 IMAGE_NAME := dist2src
+IMAGE_WORKER_NAME ?= docker.io/usercont/dist2src-worker
 CONTAINER_ENGINE ?= $(shell command -v podman 2> /dev/null || echo docker)
 CONTAINER_CMD ?= /bin/bash
 TEST_TARGET ?= ./tests
@@ -69,3 +70,6 @@ check-in-container:
 # DEPLOYMENT=local make deploy TAGS=worker
 deploy:
 	make -C deployment deploy
+
+worker:
+	$(CONTAINER_ENGINE) build -t $(IMAGE_WORKER_NAME) -f files/Containerfile.worker .

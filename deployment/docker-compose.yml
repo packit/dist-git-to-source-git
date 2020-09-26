@@ -1,0 +1,68 @@
+version: "2"
+
+services:
+  redis:
+    image: registry.fedoraproject.org/f31/redis
+    container_name: redis
+    ports:
+      - 6379:6379
+    user: "123123"
+
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    ports:
+      - 8081:8081
+    depends_on:
+      - redis
+    user: "123123"
+
+  flower:
+    image: mher/flower
+    container_name: flower
+    ports:
+      - 5555:5555
+    depends_on:
+      - redis
+    environment:
+      FLOWER_DEBUG: "True"
+      CELERY_BROKER_URL: redis://redis:6379/0
+    user: "123123"
+
+  worker:
+    container_name: worker
+    build:
+      context: ..
+      dockerfile: files/Containerfile.worker
+    image: docker.io/usercont/dist2src-worker
+    command: /usr/bin/run_worker.sh
+    tty: true
+    depends_on:
+      - redis
+    environment:
+      DEPLOYMENT: dev
+      APP: dist2src.worker.tasks
+      CELERY_TASK_NAME: task.dist2src.process_message
+    volumes:
+      - ../dist2src/worker:/usr/local/lib/python3.7/site-packages/dist2src/worker:ro,z
+    user: "123123"
+
+  centosmsg:
+    container_name: centosmsg
+    image: docker.io/usercont/packit-service-centosmsg:prod
+    depends_on:
+      - redis
+    environment:
+      DEPLOYMENT: dev
+      LOG_LEVEL: DEBUG
+      REDIS_SERVICE_HOST: redis
+      CELERY_TASK_NAME: task.dist2src.process_message
+      #DISABLE_SENDING_CELERY_TASKS: disable
+    volumes:
+      - ./roles/deploy/files/secrets/dev/centos-server-ca.cert:/secrets/centos-server-ca.cert:ro,Z
+      - ./roles/deploy/files/secrets/dev/centos.cert:/secrets/centos.cert:ro,Z
+    user: "123123"

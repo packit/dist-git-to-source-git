@@ -1,0 +1,26 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+- name: Install dependencies for dist2src worker
+  hosts: all
+  tasks:
+    - name: Install all RPMs needed to install & run dist2src worker
+      dnf:
+        name:
+          - python3-pip
+          - python3-click
+          - python3-GitPython
+          - python3-sh
+          - rebase-helper
+          - python3-timeout-decorator
+          - python3-celery
+          - python3-redis
+          - python3-lazy-object-proxy
+          - redis # redis-cli for debugging
+    - name: Install pip deps
+      pip:
+        name:
+          - sentry-sdk
+    - name: Chek if all pip packages have all dependencies installed
+      command: pip3 check
