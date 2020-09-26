@@ -25,4 +25,4 @@ worker_replicas: 1
 celery_task_name: task.dist2src.process_message
 
 container_engine: "{{ lookup('pipe', 'command -v podman 2> /dev/null || echo docker') }}"
-deployment: "{{ lookup('env', 'DEPLOYMENT') or 'main' }}"
+deployment: "{{ lookup('env', 'DEPLOYMENT') }}"

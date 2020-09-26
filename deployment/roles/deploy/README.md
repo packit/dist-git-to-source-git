@@ -5,11 +5,12 @@ This role deploys dist2src-update service to Openshift.
 ## Role Variables
 
 Default variables are set in [defaults/main.yml](defaults/main.yml).
-At least `api_key` needs to be re-defined in a yaml file in [vars/](vars/).
-There's for example [vars/local.yml](vars/local.yml) which will be used if you set
-`DEPLOYMENT=local` environment variable.
-If you don't specify `DEPLOYMENT`, [vars/main.yml](vars/main.yml) (which is .gitignore-d)
-will be used by default.
+At least `api_key` needs to be re-defined in a yaml file in [vars/](vars).
+If you're for example deploying to prod environment, create `vars/prod.yml`,
+set `api_key` there and run `DEPLOYMENT=prod make deploy`.
+Don't worry, all `vars/*.yml` files are .gitignore-d.
+There's also [vars/local.yml](vars/local.yml), which will be used
+if you run `DEPLOYMENT=local make deploy`.
 
 ## Secrets
 
