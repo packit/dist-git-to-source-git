@@ -271,6 +271,21 @@ class Dist2Src:
         """
         We are unable to get a git repo when a packages uses %setup + %patch
         so we need to turn %setup into %autosetup -N
+
+        this method makes sure there is a git repo in <REPO>/PACKAGE-VERSION/.git
+        after running %prep, this is how:
+        1. %autosetup - cool: just "return"
+        2. %autopatch - it calls to %__scm_apply_%{...} which we override: just "return"
+        3. %setup and no %patch - we need to turn %setup into %autosetup to create
+           the git repo
+        4. %setup + %patch - most common and complicated as hell:
+           a) %setup -a -a ... - we can't turn it to %autosetup b/c
+              `%autosetup -a -a` doesn't work https://bugzilla.redhat.com/show_bug.cgi?id=1881840
+           b) %setup + pushd/cd - we cannot recreate those patches correctly since
+              they are not applied from root #92
+           c) no bullshit, just plain %setup and %patch -- in any case, we turn
+              %setup into %autosetup -N to be sure the .git repo is created correctly
+              unless `-a -a` is used
         """
         prep_lines = self.dist_git_spec.spec_content.section("%prep")
 
@@ -278,13 +293,19 @@ class Dist2Src:
             # e.g. appstream-data does not have a %prep section
             return
 
+        a_a_regex = re.compile(r"-a")
         for i, line in enumerate(prep_lines):
-            if line.startswith(("%autosetup", "%autopatch", "%patch")):
-                logger.info("This package uses %autosetup or %[auto]patch.")
+            if line.startswith(("%autosetup", "%autopatch")):
+                logger.info("This package uses %autosetup or %autopatch.")
                 # cool, we're good
                 return
             elif line.startswith("%setup"):
-                # %setup -> %autosetup -p1
+                if len(a_a_regex.findall(line)) >= 2:
+                    logger.info(
+                        "`%setup -aN -aM` detected, we cannot turn it to %autosetup"
+                    )
+                    continue
+                # %setup -> %autosetup -N
                 prep_lines[i] = line.replace("%setup", "%autosetup -N")
                 # %autosetup does not accept -q, remove it
                 prep_lines[i] = re.sub(r"\s+-q", r"", prep_lines[i])

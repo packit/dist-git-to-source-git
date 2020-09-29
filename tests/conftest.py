@@ -42,6 +42,13 @@ TEST_PROJECTS_WITH_BRANCHES = [
     ("gdb", "c8s"),  # conditional patching, a ton of if's and addition of more sources
     ("sqlite", "c8s"),  # conditional patching + autoconf
     ("haproxy", "c8s"),  # they ignore our files
+    # ("openblas", "c8"),  # openblas-0.3.3/OpenBLAS-0.3.3/
+    # ("fuse", "c8"),  # 2 libraries being built in a single buildroot, we cannot make
+    #                  # a reliable source-git for this
+    (
+        "unbound",
+        "c8",
+    ),  # again, another level of directories and patches applied in a subdir
 ]
 
 # these packages only have a single commit in the respective dist-git branch
@@ -55,6 +62,8 @@ TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT = [
     ("acpica-tools", "c8"),  # %setup, %patch, unpack %SOURCE1, a ton of operations
     ("socat", "c8s"),  # %setup + %patch # problem with  previous commit
     ("meanwhile", "c8"),  # -p0 + -p1 patches
+    ("nss-util", "c8"),  # double nested dir: nss-util-3.39/nss/ and `cd nss` in %prep
+    ("metis", "c8"),  # %setup -qc && pushd %{name}-%{version}
 ]
 
 
