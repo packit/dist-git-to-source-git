@@ -15,7 +15,9 @@ second_to_last_dir=$(basename $(dirname ${top_level_git_path}))
 # the git repo exists here
 if [ $second_to_last_dir != "BUILD" ]; then
   git init
-  git add .
+  # we are doing -f to bypass .gitignore which can mask packit.yaml or the specfile
+  # https://github.com/packit/dist-git-to-source-git/issues/66#issuecomment-694284493
+  git add -f .
   # that PWD magic prints the name of the PWD, which usually is NAME-VERSION
   git commit --allow-empty -a -m "${PWD##*/} base"
 fi
@@ -45,6 +47,6 @@ if [ "$patch_id" != "%{2}" ]; then
   printf -v commit_message "${commit_message}\nlocation_in_specfile: ${patch_id}"
 fi
 
-git add .
+git add -f .
 # patches can be empty, rpmbuild if fine with it
 git commit -m "$commit_message" --allow-empty

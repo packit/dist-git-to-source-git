@@ -5,8 +5,8 @@
 # if there are no patches, packitpatch never gets invoked and this will b/c of autosetup
 %__scm_setup_patch(q)\
 %{__git} init\
-%{__git} add .\
-%{__git} commit --allow-empty -a -m "%{NAME}-%{VERSION} base"
+%{__git} add -f .\
+%{__git} commit -q --allow-empty -a -m "%{NAME}-%{VERSION} base"
 
 # %{1} = absolute path to the patch
 # %{2} = patch ID
@@ -17,8 +17,8 @@
 
 %__scm_setup_git(q)\
 %{__git} init %{-q}\
-%{__git} add .\
-%{__git} commit %{-q} --allow-empty -a -m "%{NAME}-%{VERSION} base"
+%{__git} add -f .\
+%{__git} commit -q --allow-empty -a -m "%{NAME}-%{VERSION} base"
 
 # commit_msg contains commit message of the last commit
 %__scm_apply_git_am(qp:m:)\
