@@ -283,7 +283,9 @@ class Dist2Src:
               `%autosetup -a -a` doesn't work https://bugzilla.redhat.com/show_bug.cgi?id=1881840
            b) %setup + pushd/cd - we cannot recreate those patches correctly since
               they are not applied from root #92
-           c) no bullshit, just plain %setup and %patch -- in any case, we turn
+           c) %setup -T - do not unpack SOURCE0: in this case we don't want %autosetup b/c
+              it would be empty, we need to rely on %patch
+           d) no bullshit, just plain %setup and %patch -- in any case, we turn
               %setup into %autosetup -N to be sure the .git repo is created correctly
               unless `-a -a` is used
         """
@@ -294,6 +296,8 @@ class Dist2Src:
             return
 
         a_a_regex = re.compile(r"-a")
+        # -T means to not unpack, it can actually be set e.g. like "-cT"
+        cap_t_regex = re.compile(r"-[a-zA-Z]*T")
         for i, line in enumerate(prep_lines):
             if line.startswith(("%autosetup", "%autopatch")):
                 logger.info("This package uses %autosetup or %autopatch.")
@@ -303,6 +307,11 @@ class Dist2Src:
                 if len(a_a_regex.findall(line)) >= 2:
                     logger.info(
                         "`%setup -aN -aM` detected, we cannot turn it to %autosetup"
+                    )
+                    continue
+                if cap_t_regex.findall(line):
+                    logger.info(
+                        "`%setup -T` detected - no %autosetup, we need to rely on %patch"
                     )
                     continue
                 # %setup -> %autosetup -N

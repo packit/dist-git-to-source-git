@@ -49,6 +49,7 @@ TEST_PROJECTS_WITH_BRANCHES = [
         "unbound",
         "c8",
     ),  # again, another level of directories and patches applied in a subdir
+    # ("hyperv-daemons", "c8"),  # no archive, source code is %SOURCEXXX, does not update
 ]
 
 # these packages only have a single commit in the respective dist-git branch
