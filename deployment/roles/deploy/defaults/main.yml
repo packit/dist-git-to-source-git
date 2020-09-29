@@ -21,5 +21,8 @@ image_centosmsg: docker.io/usercont/packit-service-centosmsg:prod
 # How many workers
 worker_replicas: 1
 
+# sent by centosmsg pod and processed by worker(s)
+celery_task_name: task.dist2src.process_message
+
 container_engine: "{{ lookup('pipe', 'command -v podman 2> /dev/null || echo docker') }}"
-deployment: "{{ lookup('env', 'DEPLOYMENT') or 'main' }}"
+deployment: "{{ lookup('env', 'DEPLOYMENT') }}"
