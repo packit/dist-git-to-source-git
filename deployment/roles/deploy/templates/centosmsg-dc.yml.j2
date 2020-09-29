@@ -1,0 +1,62 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+kind: DeploymentConfig
+apiVersion: v1
+metadata:
+  labels:
+    app: dist2src
+    name: dist2src-centosmsg
+  name: dist2src
+spec:
+  template:
+    metadata:
+      labels:
+        name: dist2src-centosmsg
+        app: dist2src
+    spec:
+      volumes:
+        - name: centos-secrets
+          secret:
+            secretName: centos-secrets
+      containers:
+        - name: dist2src-centosmsg
+          image: dist2src-centosmsg
+          env:
+            - name: MQTT_HOST
+              value: mqtt.git.centos.org
+            - name: MQTT_TOPICS
+              value: git.centos.org/#
+            - name: MQTT_SUBTOPICS
+              value: git.receive
+            - name: REDIS_SERVICE_HOST
+              value: redis
+            # change when implementation is done
+            - name: CELERY_TASK_NAME
+              value: ""
+            # temporary, delete when workers are configured and implementation is done
+            - name: DISABLE_SENDING_CELERY_TASKS
+              value: disable
+          volumeMounts:
+            - name: centos-secrets
+              mountPath: /secrets
+          command:
+            - "listen-to-centos-messaging"
+          resources:
+            limits:
+              memory: "80Mi"
+              cpu: "100m"
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - dist2src-centosmsg
+        from:
+          kind: ImageStreamTag
+          name: dist2src-centosmsg:latest
+  replicas: 1
+  strategy:
+    type: Recreate
