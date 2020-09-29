@@ -19,7 +19,7 @@ if [ $second_to_last_dir != "BUILD" ]; then
   # https://github.com/packit/dist-git-to-source-git/issues/66#issuecomment-694284493
   git add -f .
   # that PWD magic prints the name of the PWD, which usually is NAME-VERSION
-  git commit --allow-empty -a -m "${PWD##*/} base"
+  git commit -q --allow-empty -a -m "${PWD##*/} base"
 fi
 
 if [ "$1" == "%{1}" ]; then
@@ -42,11 +42,22 @@ patch_name: ${patch_name}
 present_in_specfile: true
 EOF
 )
+
+# when patches are applied with -p0, we need to strip the prefix
+# in packit when creating the patch files
+if echo ${@:3} | grep -E "[-]p0|[-]p 0"; then
+  commit_message=$(cat << EOF
+$commit_message
+no_prefix: true
+EOF
+)
+fi
+
 if [ "$patch_id" != "%{2}" ]; then
   # concat 2 strings and separate them with \n - a nightmare to do in bash
   printf -v commit_message "${commit_message}\nlocation_in_specfile: ${patch_id}"
 fi
 
 git add -f .
-# patches can be empty, rpmbuild if fine with it
+# patches can be empty, rpmbuild is fine with it
 git commit -m "$commit_message" --allow-empty

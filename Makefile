@@ -43,7 +43,7 @@ run:
 		-v $(CURDIR)/dist2src:/usr/local/lib/python3.6/site-packages/dist2src:Z \
 		-v $(CURDIR)/packitpatch:/usr/bin/packitpatch:Z \
 		-v $(CURDIR)/macros.packit:/usr/lib/rpm/macros.d/macros.packit:Z \
-		--entrypoint= \
+		-v $(CURDIR)/tests:/tests:Z \
 		-u $(shell id -u) \
 		$(OPTS) \
 		$(IMAGE_NAME) $(CONTAINER_CMD)
@@ -60,7 +60,6 @@ check-in-container:
 		-v $(CURDIR)/packitpatch:/usr/bin/packitpatch:Z \
 		-v $(CURDIR)/macros.packit:/usr/lib/rpm/macros.d/macros.packit:Z \
 		-v $(CURDIR)/tests:/tests:Z \
-		--entrypoint= \
 		-u $(shell id -u) \
 		-w / \
 		$(OPTS) \
