@@ -10,9 +10,9 @@ metadata:
   annotations:
     # Setting triggers to StatefulSet is tricky (they also don't appear in GUI).
     # I run the following and then checked how the resulting yaml looks like.
-    # oc set triggers statefulset.apps/dist2src-worker --from-image=dist2src-worker:latest -c dist2src-worker-1
+    # oc set triggers sts/dist2src-worker --from-image=dist2src-worker:latest -c dist2src-worker
     image.openshift.io/triggers: >-
-      [{"from":{"kind":"ImageStreamTag","name":"dist2src-worker:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"dist2src-worker-1\")].image"}]
+      [{"from":{"kind":"ImageStreamTag","name":"dist2src-worker:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"dist2src-worker\")].image"}]
 spec:
   selector:
     matchLabels:
