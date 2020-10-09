@@ -137,3 +137,19 @@ Patch4:         %{name}
             assert b"no_prefix: true" in commit_content
         else:
             assert b"no_prefix:" not in commit_content
+
+
+def test_no_backup(tmp_path: Path):
+    package_name = "hyperv-daemons"
+    d = tmp_path / "d"
+    d.mkdir()
+    dist_git_path = d / package_name
+    subprocess.check_call(
+        ["git", "clone", f"https://git.centos.org/rpms/{package_name}.git"], cwd=d
+    )
+    subprocess.check_call(["git", "checkout", "c8"], cwd=dist_git_path)
+    b = dist_git_path / "BUILD" / "hyperv-daemons-0"
+    run_dist2src(["-v", "run-prep", str(dist_git_path)], working_dir=dist_git_path)
+    assert b.is_dir()
+    assert b.joinpath("lsvmbus").is_file()
+    assert not b.joinpath("lsvmbus.lsvmbus_python3").exists()
