@@ -9,6 +9,7 @@ from pathlib import Path
 
 import click
 
+from dist2src.constants import VERY_VERY_HARD_PACKAGES
 from dist2src.core import Dist2Src
 
 
@@ -191,6 +192,13 @@ def convert(ctx, origin: str, dest: str):
     """Convert a dist-git repository into a source-git repository, using
     'rpmbuild' and executing the "%prep" stage from the spec file.
 
+    If the package is on the list of "hard" packages, there will be only a single
+    commit representing the current dist-git tree,
+    if it's not on the list, multiple commits will be in the repo:
+     * upstream archive unpacked as a single commit
+     * multiple commits for spec file, packit.yaml and additional sources
+     * every patch is a commit
+
     Update if the branch exists.
 
     ORIGIN and DEST are in the format of
@@ -207,7 +215,9 @@ def convert(ctx, origin: str, dest: str):
         source_git_path=Path(dest_dir),
         log_level=ctx.obj[VERBOSE_KEY],
     )
-    if d2s.source_git_path.exists() and dest_branch in d2s.source_git.repo.branches:
+    if d2s.package_name in VERY_VERY_HARD_PACKAGES:
+        d2s.convert_single_commit(origin_branch, dest_branch)
+    elif d2s.source_git_path.exists() and dest_branch in d2s.source_git.repo.branches:
         logger.info(
             "The source-git repository and branch exist. Updating existing source-git..."
         )

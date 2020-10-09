@@ -18,6 +18,10 @@ from tests.conftest import (
 
 @pytest.mark.parametrize("package_name,branch", TEST_PROJECTS_WITH_BRANCHES)
 def test_update(tmp_path: Path, package_name, branch):
+    """
+    perform an update from a previous dist-git commit (HEAD~1)
+    to the last one (HEAD)
+    """
     dist_git_path = tmp_path / "d" / package_name
     sg_path = tmp_path / "s" / package_name
     dist_git_path.mkdir(parents=True)
@@ -55,10 +59,8 @@ def test_update(tmp_path: Path, package_name, branch):
         [
             "--debug",
             "srpm",
-            "--output",
-            str(sg_path / f"{package_name}.src.rpm"),
-            str(sg_path),
-        ]
+        ],
+        working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
     srpm_path = next(sg_path.glob("*.src.rpm"))
     assert srpm_path.exists()
@@ -78,6 +80,9 @@ def test_update(tmp_path: Path, package_name, branch):
     "package_name,branch", TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT
 )
 def test_update_from_same_commit(tmp_path: Path, package_name, branch):
+    """
+    run an update twice from the same commit
+    """
     dist_git_path = tmp_path / "d" / package_name
     sg_path = tmp_path / "s" / package_name
     dist_git_path.mkdir(parents=True)
@@ -146,6 +151,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     ],
 )
 def test_update_source(tmp_path: Path, package_name, branch, old_version):
+    """ perform an update from a specific ref to the last commit """
     dist_git_path = tmp_path / "d" / package_name
     sg_path = tmp_path / "s" / package_name
     dist_git_path.mkdir(parents=True)
