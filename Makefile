@@ -53,6 +53,7 @@ check:
 
 # if you want to inspect repos which are created during a test run, do `-v /tmp:/tmp` and navigate to /tmp/pytest*/...
 # sadly this doesn't work in CI (SELinux?)
+# -u $(id -u) doesn't work on F33
 check-in-container:
 	$(CONTAINER_ENGINE) run \
 		-ti --rm \
