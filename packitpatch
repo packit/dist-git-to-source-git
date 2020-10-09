@@ -33,7 +33,10 @@ patch_name=$(basename $patch_path)
 patch_id=$2
 
 # we process first and second arg above, the rest is for patch
-cat - | /usr/bin/patch ${@:3}
+# and we don't want backup files in our source-git repos
+patch_args=$(echo ${@:3} | sed -e 's/ -b//' -e 's/--backup//')
+
+cat - | /usr/bin/patch ${patch_args}
 
 commit_message=$(cat << EOF
 Apply patch ${patch_name}
