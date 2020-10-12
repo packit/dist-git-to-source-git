@@ -8,3 +8,6 @@ TAGS ?= all
 # DEPLOYMENT=local make deploy TAGS=worker
 deploy:
 	$(AP) deploy.yml --tags $(TAGS)
+
+check:
+	$(AP) check.yml
