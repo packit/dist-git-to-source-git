@@ -1,0 +1,14 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: log-files-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi

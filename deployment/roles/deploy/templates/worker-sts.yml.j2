@@ -33,6 +33,10 @@ spec:
         alpha.image.policy.openshift.io/resolve-names: '*'
     spec:
       terminationGracePeriodSeconds: 10
+      volumes:
+        - name: log-files
+          persistentVolumeClaim:
+            claimName: log-files-pvc
       containers:
         - name: dist2src-worker
           image: dist2src-worker:latest
@@ -48,6 +52,9 @@ spec:
             - configMapRef:
                 name: env-config
           command: ["/usr/bin/run_worker.sh"]
+          volumeMounts:
+            - name: log-files
+              mountPath: /log-files
           resources:
             limits:
               memory: "384Mi"
