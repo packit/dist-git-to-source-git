@@ -6,27 +6,27 @@
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: dist2src-worker
+  name: worker
   annotations:
     # Setting triggers to StatefulSet is tricky (they also don't appear in GUI).
     # I run the following and then checked how the resulting yaml looks like.
-    # oc set triggers sts/dist2src-worker --from-image=dist2src-worker:latest -c dist2src-worker
+    # oc set triggers sts/worker --from-image=worker:latest -c worker
     image.openshift.io/triggers: >-
-      [{"from":{"kind":"ImageStreamTag","name":"dist2src-worker:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"dist2src-worker\")].image"}]
+      [{"from":{"kind":"ImageStreamTag","name":"worker:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"worker\")].image"}]
 spec:
   selector:
     matchLabels:
       # has to match .spec.template.metadata.labels
-      name: dist2src-worker
+      name: worker
       app: dist2src
-  serviceName: "dist2src-worker"
+  serviceName: worker
   replicas: {{ worker_replicas }}
   updateStrategy.type: RollingUpdate
   podManagementPolicy: OrderedReady
   template:
     metadata:
       labels:
-        name: dist2src-worker
+        name: worker
         app: dist2src
       # https://docs.openshift.com/container-platform/3.11/dev_guide/managing_images.html#using-is-with-k8s
       annotations:
@@ -38,8 +38,8 @@ spec:
           persistentVolumeClaim:
             claimName: log-files-pvc
       containers:
-        - name: dist2src-worker
-          image: dist2src-worker:latest
+        - name: worker
+          image: worker:latest
           env:
             - name: APP
               value: dist2src.worker.tasks
@@ -61,7 +61,7 @@ spec:
               cpu: "400m"
   volumeClaimTemplates:
     - metadata:
-        name: dist2src-worker-vol
+        name: worker-vol
       spec:
         accessModes: ["ReadWriteOnce"]
         resources:

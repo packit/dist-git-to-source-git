@@ -9,7 +9,7 @@
     deployment: "{{ lookup('env', 'DEPLOYMENT') }}"
     DCs:
       - redis
-      - dist2src-worker
+      - worker
   tasks:
     - name: include variables
       include_vars: "{{ project_dir }}/deployment/roles/deploy/vars/{{ deployment }}.yml"
