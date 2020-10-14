@@ -1,0 +1,38 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+kind: DeploymentConfig
+apiVersion: v1
+metadata:
+  name: nginx
+  labels:
+    service: nginx
+spec:
+  selector:
+    service: nginx
+  template:
+    metadata:
+      labels:
+        service: nginx
+        name: nginx
+    spec:
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx
+      containers:
+        - name: nginx
+          image: nginxinc/nginx-unprivileged
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx
+          resources:
+            limits:
+              cpu: "50m"
+              memory: "80Mi"
+  replicas: 1
+  strategy:
+    type: Recreate

@@ -10,8 +10,9 @@
 - include_tasks: ./push-dev-images.yml
   when: push_dev_images
 - include_tasks: ./deploy-secrets.yml
-- include_tasks: ./deploy-configmap.yml
+- include_tasks: ./deploy-configmaps.yml
 - include_tasks: ./deploy-redis.yml
 - include_tasks: ./deploy-workers.yml
 - include_tasks: ./deploy-centosmsg.yml
+- include_tasks: ./deploy-pushgateway-nginx.yml
 - include_tasks: ./wait-for-pods.yml

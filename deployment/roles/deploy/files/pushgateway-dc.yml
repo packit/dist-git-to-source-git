@@ -1,0 +1,32 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+kind: DeploymentConfig
+apiVersion: v1
+metadata:
+  labels:
+    app: dist2src
+    name: pushgateway
+  name: pushgateway
+spec:
+  template:
+    metadata:
+      labels:
+        name: pushgateway
+        app: dist2src
+    spec:
+      containers:
+        - name: pushgateway
+          image: weaveworks/prom-aggregation-gateway
+          args: ["--listen=:9091"]
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9091
+          resources:
+            limits:
+              cpu: "50m"
+              memory: "80Mi"
+  replicas: 1
+  strategy:
+    type: Recreate

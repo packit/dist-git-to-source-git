@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 ---
-- name: Deploy ConfigMap
+- name: Deploy ConfigMaps
   k8s:
     namespace: "{{ project }}"
     resource_definition: "{{ item }}"
@@ -10,6 +10,7 @@
     api_key: "{{ api_key }}"
     validate_certs: "{{ validate_certs }}"
   with_template:
-    - configmap.yml.j2
+    - env-config-cm.yml.j2
+    - nginx-cm.yml.j2
   tags:
     - always

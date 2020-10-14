@@ -10,6 +10,9 @@
     DCs:
       - redis
       - worker
+      #      - centosmsg
+      - pushgateway
+      - nginx
   tasks:
     - name: include variables
       include_vars: "{{ project_dir }}/deployment/roles/deploy/vars/{{ deployment }}.yml"

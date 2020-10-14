@@ -1,0 +1,19 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+apiVersion: v1
+kind: Route
+metadata:
+  name: nginx
+  labels:
+    service: nginx
+spec:
+  port:
+    targetPort: nginx-http
+  to:
+    kind: Service
+    name: nginx
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: None
