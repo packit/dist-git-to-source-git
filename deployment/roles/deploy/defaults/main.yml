@@ -26,3 +26,6 @@ celery_task_name: task.dist2src.process_message
 
 container_engine: "{{ lookup('pipe', 'command -v podman 2> /dev/null || echo docker') }}"
 deployment: "{{ lookup('env', 'DEPLOYMENT') }}"
+
+# Whether to periodically import image(s) from registry to image stream(s)
+auto_import_images: true

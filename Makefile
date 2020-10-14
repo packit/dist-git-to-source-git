@@ -66,10 +66,14 @@ check-in-container:
 		$(OPTS) \
 		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv $(TEST_TARGET)
 
+worker:
+	$(CONTAINER_ENGINE) build -t $(IMAGE_WORKER_NAME) -f files/Containerfile.worker .
+
 # example:
 # DEPLOYMENT=local make deploy TAGS=worker
 deploy:
 	make -C deployment deploy
 
-worker:
-	$(CONTAINER_ENGINE) build -t $(IMAGE_WORKER_NAME) -f files/Containerfile.worker .
+# Check whether everything has been deployed OK with 'make deploy'
+check-deployment:
+	make -C deployment check

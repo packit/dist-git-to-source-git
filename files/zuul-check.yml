@@ -1,0 +1,16 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+- name: Check deployment
+  hosts: all
+  vars:
+    project_dir: "{{ playbook_dir }}/.."
+  tasks:
+    - command: make check-deployment
+      environment:
+        DEPLOYMENT: dev
+        ANSIBLE_STDOUT_CALLBACK: debug
+      args:
+        chdir: "{{ project_dir }}"
+      become: true

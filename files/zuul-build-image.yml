@@ -1,0 +1,14 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+- name: Build worker image
+  hosts: all
+  vars:
+    project_dir: "{{ playbook_dir }}/.."
+  tasks:
+    - name: Build worker image
+      command: make worker
+      args:
+        chdir: "{{ project_dir }}"
+      become: true

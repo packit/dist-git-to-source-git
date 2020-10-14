@@ -1,0 +1,19 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+- name: Check a deployment
+  hosts: all
+  vars:
+    project_dir: "{{ playbook_dir }}/.."
+    deployment: "{{ lookup('env', 'DEPLOYMENT') }}"
+    DCs:
+      - redis
+      - dist2src-worker
+  tasks:
+    - name: include variables
+      include_vars: "{{ project_dir }}/deployment/roles/deploy/vars/{{ deployment }}.yml"
+
+    - name: Checking running pods of {{ DCs }}
+      include_tasks: check-pod-running.yml
+      loop: "{{ DCs }}"

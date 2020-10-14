@@ -1,0 +1,43 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+- name: Create vars/dev.yml and deploy
+  hosts: all
+  vars:
+    project_dir: "{{ playbook_dir }}/.."
+  tasks:
+    - name: Install packages for deployment
+      dnf:
+        name:
+          - ansible
+          - python3-openshift
+          - make
+      become: true
+
+    - name: get token
+      command: oc whoami -t
+      register: kubeconfig_token
+      become: true
+
+    - name: Create vars/dev.yml
+      copy:
+        content: |
+          project: myproject
+          host: https://127.0.0.1:8443
+          api_key: {{ kubeconfig_token.stdout }}
+          validate_certs: no
+          push_dev_images: true
+          # In dev/testing environment we want to use our locally built image
+          # and don't update it from registry
+          auto_import_images: false
+        dest: "{{ project_dir }}/deployment/roles/deploy/vars/dev.yml"
+
+    - name: Actually deploy
+      command: make deploy
+      environment:
+        DEPLOYMENT: dev
+        ANSIBLE_STDOUT_CALLBACK: debug
+      args:
+        chdir: "{{ project_dir }}"
+      become: true

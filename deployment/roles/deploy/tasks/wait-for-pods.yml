@@ -1,0 +1,23 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+- name: Wait for DCs rollouts to complete
+  # timeout 10min to not wait indefinitely in case of a problem
+  command: timeout 10m oc rollout status -w dc/{{ item }}
+  register: oc_rollout_status
+  failed_when: '"successfully rolled out" not in oc_rollout_status.stdout'
+  loop:
+    - redis
+- name: Wait for worker-0 to be running
+  k8s:
+    namespace: "{{ project }}"
+    host: "{{ host }}"
+    api_key: "{{ api_key }}"
+    validate_certs: "{{ validate_certs }}"
+    name: dist2src-worker-0
+    kind: Pod
+    wait: yes
+    wait_condition:
+      type: Ready
+    wait_timeout: 600 # 10 minutes to pull the image and run the container

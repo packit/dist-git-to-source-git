@@ -4,6 +4,7 @@
       jobs:
         - pre-commit
         - dist2src-tests
+        - dist2src-deployment-tests
     gate:
       jobs:
         - pre-commit
@@ -12,6 +13,17 @@
     # job names are global, this should be unique
     name: dist2src-tests
     parent: base
-    attempts: 1
     description: Run tests
-    run: zuul-tests.yaml
+    run: files/zuul-tests.yaml
+
+- job:
+    name: dist2src-deployment-tests
+    parent: oc-cluster-up
+    description: Deploy and check
+    extra-vars:
+      deployment: dev
+    pre-run:
+      - files/zuul-build-image.yml
+      - files/zuul-generate-secrets.yml
+      - files/zuul-deploy.yml
+    run: files/zuul-check.yml
