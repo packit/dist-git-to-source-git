@@ -10,4 +10,6 @@ validate_certs: no
 
 push_dev_images: true
 
+auto_import_images: false
+
 api_key: ""

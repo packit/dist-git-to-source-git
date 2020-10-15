@@ -2,14 +2,18 @@
 # SPDX-License-Identifier: MIT
 
 ---
-- name: Deploy ConfigMap
+- name: Deploy aggregating pushgateway and nginx to reverse proxy the pushgateway
   k8s:
     namespace: "{{ project }}"
     resource_definition: "{{ item }}"
     host: "{{ host }}"
     api_key: "{{ api_key }}"
     validate_certs: "{{ validate_certs }}"
-  with_template:
-    - configmap.yml.j2
+  with_file:
+    - pushgateway-dc.yml
+    - pushgateway-service.yml
+    - nginx-dc.yml
+    - nginx-service.yml
+    - nginx-route.yml
   tags:
-    - always
+    - pushgateway

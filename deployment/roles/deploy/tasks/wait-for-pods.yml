@@ -9,13 +9,17 @@
   failed_when: '"successfully rolled out" not in oc_rollout_status.stdout'
   loop:
     - redis
+    #    - centosmsg
+    - pushgateway
+    - nginx
+
 - name: Wait for worker-0 to be running
   k8s:
     namespace: "{{ project }}"
     host: "{{ host }}"
     api_key: "{{ api_key }}"
     validate_certs: "{{ validate_certs }}"
-    name: dist2src-worker-0
+    name: worker-0
     kind: Pod
     wait: yes
     wait_condition:

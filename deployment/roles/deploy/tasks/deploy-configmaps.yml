@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 ---
-- name: Deploy worker
+- name: Deploy ConfigMaps
   k8s:
     namespace: "{{ project }}"
     resource_definition: "{{ item }}"
@@ -10,8 +10,7 @@
     api_key: "{{ api_key }}"
     validate_certs: "{{ validate_certs }}"
   with_template:
-    - log-files-pvc.yml.j2
-    - worker-is.yml.j2
-    - worker-sts.yml.j2
+    - env-config-cm.yml.j2
+    - nginx-cm.yml.j2
   tags:
-    - worker
+    - always

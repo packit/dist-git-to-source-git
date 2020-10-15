@@ -5,23 +5,23 @@
 kind: DeploymentConfig
 apiVersion: v1
 metadata:
+  name: centosmsg
   labels:
     app: dist2src
-    name: dist2src-centosmsg
-  name: dist2src
+    name: centosmsg
 spec:
   template:
     metadata:
       labels:
-        name: dist2src-centosmsg
+        name: centosmsg
         app: dist2src
     spec:
       volumes:
         - name: centos-secrets
           secret:
-            secretName: centos-secrets
+            secretName: centos
       containers:
-        - name: dist2src-centosmsg
+        - name: centosmsg
           image: dist2src-centosmsg
           env:
             - name: MQTT_HOST
@@ -51,7 +51,7 @@ spec:
       imageChangeParams:
         automatic: true
         containerNames:
-          - dist2src-centosmsg
+          - centosmsg
         from:
           kind: ImageStreamTag
           name: dist2src-centosmsg:latest

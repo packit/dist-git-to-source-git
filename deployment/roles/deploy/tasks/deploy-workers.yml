@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 ---
-- name: Deploy secrets
+- name: Deploy workers
   k8s:
     namespace: "{{ project }}"
     resource_definition: "{{ item }}"
@@ -10,7 +10,8 @@
     api_key: "{{ api_key }}"
     validate_certs: "{{ validate_certs }}"
   with_template:
-    - sentry-secret.yml.j2
-    - centos-secret.yml.j2
+    - log-files-pvc.yml.j2
+    - worker-is.yml.j2
+    - worker-sts.yml.j2
   tags:
-    - always
+    - worker

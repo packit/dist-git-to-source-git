@@ -1,0 +1,29 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: nginx
+data:
+  nginx.conf: |-
+    pid /tmp/nginx.pid;
+    events {}
+    http {
+        server {
+             listen 8080;
+
+             # Serve only the /metrics endpoint (exact match) externally, and
+             # make sure it's served only using the GET method.
+             # Return 404 for all other paths.
+             location = /metrics {
+                proxy_pass       http://pushgateway;
+                proxy_method     GET;
+             }
+
+             location / {
+                return           404;
+             }
+         }
+    }
