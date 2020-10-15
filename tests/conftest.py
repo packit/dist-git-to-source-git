@@ -15,7 +15,7 @@ TEST_PROJECTS_WITH_BRANCHES = [
     # %autosetup -S git_am + needs https://koji.mbox.centos.org/koji/taginfo?tagID=342
     ("pacemaker", "c8s"),
     ("systemd", "c8s"),  # -S git_am
-    # ("kernel", "c8s"),  # !!!
+    ("kernel", "c8s"),  # !!!
     # (
     #    "qemu-kvm",
     #    "c8s-stream-rhel",

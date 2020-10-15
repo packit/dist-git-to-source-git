@@ -8,7 +8,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Union, Set
+from typing import List, Optional, Union, Set
 
 import git
 import sh
@@ -17,37 +17,15 @@ from packit.patches import PatchMetadata
 from packit.specfile import Specfile
 from yaml import dump
 
-from dist2src.constants import AFTER_PREP_HOOK, TEMP_SG_BRANCH, START_TAG, TARGETS
+from dist2src.constants import (
+    AFTER_PREP_HOOK,
+    TEMP_SG_BRANCH,
+    START_TAG,
+    TARGETS,
+    HOOKS,
+)
 
 logger = logging.getLogger(__name__)
-
-
-# would be better to have them externally (in a file at least)
-# but since this is only for kernel, it should be good enough
-KERNEL_DEBRAND_PATCH_MESSAGE = """\
-Debranding CPU patch
-
-present_in_specfile: true
-location_in_specfile: 1000
-patch_name: debrand-single-cpu.patch
-"""
-HOOKS: Dict[str, Dict[str, Any]] = {
-    "kernel": {
-        # %setup -c creates another directory level but patches don't expect it
-        AFTER_PREP_HOOK: (
-            "set -e; "
-            "shopt -s dotglob nullglob && "  # so that * would match dotfiles as well
-            "cd BUILD/kernel-4.18.0-*.el8/ && "
-            "mv ./linux-4.18.0-*.el8.x86_64/* . && "
-            "rmdir ./linux-4.18.0-*.el8.x86_64 && "
-            "git add . && "
-            "git commit --amend --no-edit"
-            # the patch is already applied in %prep
-            # "git apply ../../SOURCES/debrand-single-cpu.patch &&"
-            # f"git commit -a -m '{KERNEL_DEBRAND_PATCH_MESSAGE}'"
-        )
-    },
-}
 
 
 def get_hook(package_name: str, hook_name: str) -> Optional[str]:
@@ -363,11 +341,6 @@ class Dist2Src:
                     logger.error(str(line))
                 raise
 
-            if not (get_build_dir(self.dist_git_path).absolute() / ".git").is_dir():
-                raise RuntimeError(
-                    ".git repo not present in the BUILD/ dir after running %prep"
-                )
-
             self.dist_git.repo.git.checkout(self.relative_specfile_path)
 
             logger.debug(f"rpmbuild stdout = {running_cmd}")  # this will print stdout
@@ -408,6 +381,10 @@ class Dist2Src:
         # expand dist-git and pull the history
         self.fetch_archive()
         self.run_prep()
+        if not (get_build_dir(self.dist_git_path).absolute() / ".git").is_dir():
+            raise RuntimeError(
+                ".git repo not present in the BUILD/ dir after running %prep"
+            )
         self.dist_git.commit_all(message="Changes after running %prep")
         self.fetch_branch(source_branch="master", dest_branch=TEMP_SG_BRANCH)
         self.source_git.cherry_pick_base(
