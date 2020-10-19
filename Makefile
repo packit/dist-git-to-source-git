@@ -35,7 +35,7 @@ clean:
 	rm -rf $(DIR)/
 
 build:
-	$(CONTAINER_ENGINE) build -t $(IMAGE_NAME) .
+	$(CONTAINER_ENGINE) build -t $(IMAGE_NAME) -f Containerfile .
 
 run:
 	$(CONTAINER_ENGINE) run \
@@ -44,6 +44,8 @@ run:
 		-v $(CURDIR)/packitpatch:/usr/bin/packitpatch:Z \
 		-v $(CURDIR)/macros.packit:/usr/lib/rpm/macros.d/macros.packit:Z \
 		-v $(CURDIR)/tests:/tests:Z \
+		-v $(CURDIR)/rpms:/workdir/rpms:Z \
+		-v $(CURDIR)/source-git:/workdir/source-git:Z \
 		-u $(shell id -u) \
 		$(OPTS) \
 		$(IMAGE_NAME) $(CONTAINER_CMD)
