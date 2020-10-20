@@ -15,7 +15,7 @@ TEST_PROJECTS_WITH_BRANCHES = [
     # %autosetup -S git_am + needs https://koji.mbox.centos.org/koji/taginfo?tagID=342
     ("pacemaker", "c8s"),
     ("systemd", "c8s"),  # -S git_am
-    # ("kernel", "c8s"),  # !!!
+    ("kernel", "c8s"),  # !!!
     # (
     #    "qemu-kvm",
     #    "c8s-stream-rhel",
@@ -24,7 +24,7 @@ TEST_PROJECTS_WITH_BRANCHES = [
     #    "libvirt",
     #    "c8s-stream-rhel",
     # ),  # %autosetup -S git_am -N + weirdness + %autopatch
-    # ( "libreport", "c8s")  # -S git, they redefine "__scm_apply_git"
+    ("libreport", "c8s"),  # -S git, they redefine "__scm_apply_git"
     ("podman", "c8s-stream-rhel8"),  # %autosetup -Sgit, tar fx %SOURCE1
     # alsa-lib has an empty patch file, we need support in packit for that
     # https://bugzilla.redhat.com/show_bug.cgi?id=1875768
@@ -38,7 +38,7 @@ TEST_PROJECTS_WITH_BRANCHES = [
     # ("google-noto-cjk-fonts", "c8s")  # archive 1.8G, repo ~4G
     ("python-rpm-generators", "c8s"),  # keine upstream archive, luckily %autosetup
     # big dawg: conditional arch patches, %setup -a 1 -a 2, patching additional archives
-    # ("gcc", "c8s"),
+    ("gcc", "c8s"),
     ("gdb", "c8s"),  # conditional patching, a ton of if's and addition of more sources
     ("sqlite", "c8s"),  # conditional patching + autoconf
     ("haproxy", "c8s"),  # they ignore our files
@@ -49,7 +49,7 @@ TEST_PROJECTS_WITH_BRANCHES = [
         "unbound",
         "c8",
     ),  # again, another level of directories and patches applied in a subdir
-    # ("hyperv-daemons", "c8"),  # no archive, source code is %SOURCEXXX, does not update
+    ("hyperv-daemons", "c8"),  # no archive, source code is %SOURCEXXX, does not update
 ]
 
 # these packages only have a single commit in the respective dist-git branch

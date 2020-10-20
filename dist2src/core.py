@@ -6,8 +6,9 @@ import logging
 import os
 import re
 import shutil
+import subprocess
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Union, Set
+from typing import List, Optional, Union, Set
 
 import git
 import sh
@@ -16,41 +17,15 @@ from packit.patches import PatchMetadata
 from packit.specfile import Specfile
 from yaml import dump
 
+from dist2src.constants import (
+    AFTER_PREP_HOOK,
+    TEMP_SG_BRANCH,
+    START_TAG,
+    TARGETS,
+    HOOKS,
+)
+
 logger = logging.getLogger(__name__)
-
-# build and test targets
-TARGETS = ["centos-stream-x86_64"]
-START_TAG = "sg-start"
-POST_CLONE_HOOK = "post-clone"
-AFTER_PREP_HOOK = "after-prep"
-TEMP_SG_BRANCH = "updates"
-
-# would be better to have them externally (in a file at least)
-# but since this is only for kernel, it should be good enough
-KERNEL_DEBRAND_PATCH_MESSAGE = """\
-Debranding CPU patch
-
-present_in_specfile: true
-location_in_specfile: 1000
-patch_name: debrand-single-cpu.patch
-"""
-HOOKS: Dict[str, Dict[str, Any]] = {
-    "kernel": {
-        # %setup -c creates another directory level but patches don't expect it
-        AFTER_PREP_HOOK: (
-            "set -e; "
-            "shopt -s dotglob nullglob && "  # so that * would match dotfiles as well
-            "cd BUILD/kernel-4.18.0-*.el8/ && "
-            "mv ./linux-4.18.0-*.el8.x86_64/* . && "
-            "rmdir ./linux-4.18.0-*.el8.x86_64 && "
-            "git add . && "
-            "git commit --amend --no-edit"
-            # the patch is already applied in %prep
-            # "git apply ../../SOURCES/debrand-single-cpu.patch &&"
-            # f"git commit -a -m '{KERNEL_DEBRAND_PATCH_MESSAGE}'"
-        )
-    },
-}
 
 
 def get_hook(package_name: str, hook_name: str) -> Optional[str]:
@@ -58,7 +33,7 @@ def get_hook(package_name: str, hook_name: str) -> Optional[str]:
     return HOOKS.get(package_name, {}).get(hook_name, None)
 
 
-def get_build_dir(path: Path):
+def get_build_dir(path: Path) -> Path:
     build_dirs = [d for d in (path / "BUILD").iterdir() if d.is_dir()]
     if len(build_dirs) > 1:
         raise RuntimeError(f"More than one directory found in {path / 'BUILD'}")
@@ -324,14 +299,24 @@ class Dist2Src:
 
         self.dist_git_spec.save()
 
-    def run_prep(self):
+    def run_prep(self, ensure_autosetup: bool = True):
         """
         run `rpmbuild -bp` in the dist-git repo to get a git-repo
         in the %prep phase so we can pick the commits in the source-git repo
+
+        @param ensure_autosetup: replace %setup with %autosetup if possible
         """
         rpmbuild = sh.Command("rpmbuild")
 
         with sh.pushd(self.dist_git_path):
+            BUILD_dir = Path("BUILD")
+            if BUILD_dir.is_dir():
+                # remove BUILD/ dir if it exists
+                # for single-commit repos, this is problem in case of a rebase
+                # there would be 2 directories which the get_build_dir() function
+                # would not handle
+                shutil.rmtree(BUILD_dir)
+
             cwd = Path.cwd()
             logger.debug(f"Running rpmbuild in {cwd}")
             specfile_path = Path(f"SPECS/{cwd.name}.spec")
@@ -344,9 +329,10 @@ class Dist2Src:
             ]
             if self.log_level:  # -vv can be super-duper verbose
                 rpmbuild_args.append("-" + "v" * self.log_level)
-            rpmbuild_args.append(specfile_path)
+            rpmbuild_args.append(str(specfile_path))
 
-            self._enforce_autosetup()
+            if ensure_autosetup:
+                self._enforce_autosetup()
 
             try:
                 running_cmd = rpmbuild(*rpmbuild_args)
@@ -354,11 +340,6 @@ class Dist2Src:
                 for line in e.stderr.splitlines():
                     logger.error(str(line))
                 raise
-
-            if not (get_build_dir(self.dist_git_path).absolute() / ".git").is_dir():
-                raise RuntimeError(
-                    ".git repo not present in the BUILD/ dir after running %prep"
-                )
 
             self.dist_git.repo.git.checkout(self.relative_specfile_path)
 
@@ -400,6 +381,10 @@ class Dist2Src:
         # expand dist-git and pull the history
         self.fetch_archive()
         self.run_prep()
+        if not (get_build_dir(self.dist_git_path).absolute() / ".git").is_dir():
+            raise RuntimeError(
+                ".git repo not present in the BUILD/ dir after running %prep"
+            )
         self.dist_git.commit_all(message="Changes after running %prep")
         self.fetch_branch(source_branch="master", dest_branch=TEMP_SG_BRANCH)
         self.source_git.cherry_pick_base(
@@ -423,7 +408,78 @@ class Dist2Src:
         # get all the patch-commits
         self.rebase_patches(from_branch=TEMP_SG_BRANCH, to_branch=dest_branch)
 
-    def add_packit_config(self):
+    def copy_prep_content(self):
+        """
+        For the single-commit source-git repos, we don't care about the
+        git repo created in BUILD/<PACKAGE-VERSION> since it's wrong
+        hence we only copy the content to the source-git repo and commit it
+        """
+        dist_git_BUILD_path = get_build_dir(self.dist_git_path).absolute()
+
+        for entry in dist_git_BUILD_path.iterdir():
+            if entry.is_file():
+                logger.debug(f"copy {entry} -> {self.source_git_path}")
+                shutil.copy2(entry, self.source_git_path)
+            else:  # it's a dir
+                if entry.name == ".git":
+                    continue
+                dst = self.source_git_path.joinpath(entry.name)
+                logger.debug(f"copy {entry} -> {dst}")
+                shutil.copytree(entry, dst)
+
+    def convert_single_commit(self, origin_branch: str, dest_branch: str):
+        """
+        Convert a dist-git repository into a source-git repo in a single
+        source-git commit - we use this strategy for packages with complex
+        %prep sections (multiple archives, patching subdir, redefining %scm* macros....)
+        which cannot be converted well with the convert() function
+        """
+        logger.info(
+            "Doing a single-commit source-git repo "
+            f"for {self.package_name}:{origin_branch}"
+        )
+        self.dist_git.checkout(branch=origin_branch)
+        if self.source_git.repo.active_branch.name != dest_branch:
+            self.source_git.checkout(branch=dest_branch, orphan=True)
+
+        # if it's an update, we need to remove everything except for .git
+        for path in self.source_git_path.iterdir():
+            if path.name == ".git":
+                continue
+            logger.debug(f"rm {path}")
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+
+        # expand dist-git and pull the history
+        self.fetch_archive()
+        self.run_prep(ensure_autosetup=False)
+        self.copy_prep_content()
+
+        # configure packit
+        self.add_packit_config(commit=False)
+        self.copy_spec()
+        self.copy_all_sources(with_patches=True)
+        self.source_git.stage(add=".")
+
+        try:
+            commit_msg_suffix = (
+                subprocess.check_output(
+                    ["git", "describe", "--abbrev=0"], cwd=self.dist_git_path
+                )
+                .decode()
+                .strip()
+            )
+        except subprocess.CalledProcessError:
+            logger.error("couldn't obtain latest git-tag from the dist-git repo")
+            commit_msg_suffix = self.package_name
+        self.source_git.commit(message=f"Source-git repo for {commit_msg_suffix}")
+
+        # mark the last upstream commit
+        self.source_git.create_tag(tag=START_TAG, branch=dest_branch)
+
+    def add_packit_config(self, commit: bool = False):
         """
         Add packit config to the source-git repo.
         """
@@ -447,19 +503,28 @@ class Dist2Src:
             ],
         }
         self.source_git_path.joinpath(".packit.yaml").write_text(dump(config))
-        self.source_git.stage(add=".packit.yaml")
-        self.source_git.commit(message=".packit.yaml")
+        if commit:
+            self.source_git.stage(add=".packit.yaml")
+            self.source_git.commit(message=".packit.yaml")
 
-    def copy_all_sources(self):
-        """Copy 'SOURCES/*' from a dist-git repo to a source-git repo."""
+    def copy_all_sources(self, with_patches: bool = False):
+        """
+        Copy 'SOURCES/*' from a dist-git repo to a source-git repo.
+
+        @param with_patches: copy patch files as well
+        """
         dg_path = self.dist_git_path / "SOURCES"
         sg_path = self.source_git_path / "SPECS"
         logger.info(f"Copy all sources from {dg_path} to {sg_path}.")
 
-        for file_ in self.dist_git_spec.get_sources():
-            file_dest = sg_path / Path(file_).name
-            logger.debug(f"copying {file_} to {file_dest}")
-            shutil.copy2(file_, file_dest)
+        sources = self.dist_git_spec.get_sources()[:]
+        if with_patches:
+            sources += (x.path for x in self.dist_git_spec.get_patches())
+
+        for source in sources:
+            source_dest = sg_path / Path(source).name
+            logger.debug(f"copying {source} to {source_dest}")
+            shutil.copy2(source, source_dest)
 
     def copy_conditional_patches(self):
         """
