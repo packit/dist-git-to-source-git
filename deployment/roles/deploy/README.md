@@ -25,6 +25,12 @@ The folder should contain the following files:
 - Certificates needed by centosmsg listener:
   - `centos.cert`
   - `centos-server-ca.cert`
+- Pagure API tokens for source-git and dist-git:
+  - `src-git-token`
+  - `dist-git-token`
+- Private and public SSH-keys to be able to push to source-git:
+  - `ssh/id_rsa`
+  - `ssh/id_rsa.pub`
 
 ## License
 

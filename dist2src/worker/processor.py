@@ -1,13 +1,86 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
 
+import os
+import re
+import shutil
 from logging import getLogger
-from typing import Optional
+from pathlib import Path
+import git
+
+from ogr import PagureService
+from dist2src.core import Dist2Src
 
 logger = getLogger(__name__)
 
 
 class Processor:
-    def process_message(self, event: dict, **kwargs) -> Optional[dict]:
+    def process_message(cls, event: dict, **kwargs):
+        workdir = Path(os.getenv("D2S_WORKDIR", "/dist2src"))
+        dist_git_url = os.getenv("D2S_DIST_GIT_URL", "https://git.centos.org")
+        src_git_url = os.getenv("D2S_SRC_GIT_URL", "https://git.stg.centos.org")
+        src_git_token = os.getenv("D2S_SRC_GIT_TOKEN")
+        dist_git_namespace = os.getenv("D2S_DIST_GIT_NAMESPACE", "rpms")
+        src_git_namespace = os.getenv("D2S_SRC_GIT_NAMESPACE", "source-git")
+        fullname = event["repo"]["fullname"]
+        name = event["repo"]["name"]
+
         logger.info(f"Processing message with {event}")
-        return None
+        # is this a repository in the rpms namespace?
+        if not fullname.startswith(dist_git_namespace):
+            logger.info(
+                f"Ignore update event for {fullname}. Not in the '{dist_git_namespace}' namespace."
+            )
+            return
+        # Which branch was updated?
+        branches_watched = os.getenv("D2S_BRANCHES_WATCHED", "c8s,c8").split(",")
+        branch = event["branch"]
+
+        if event["branch"] not in branches_watched:
+            logger.info(
+                f"Ignore update event for {fullname}. "
+                "Branch {event['branch']} is not one of the watched branches: {branches_watched}."
+            )
+            return
+        # Does this repository have a source-git equvalent?
+        service = PagureService(instance_url=src_git_url, token=src_git_token)
+        project = service.get_project(namespace=src_git_namespace, repo=name)
+        if not project.exists():
+            # Log something, maybe count this
+            logger.info(
+                f"Ignore update event for {fullname}. "
+                "The corresponding source-git repo does not exist."
+            )
+            return
+        # clone repo from rpms/ and checkout the branch
+        dist_git_dir = workdir / fullname
+        shutil.rmtree(dist_git_dir, ignore_errors=True)
+        dist_git_repo = git.Repo.clone_from(
+            f"https://{dist_git_host}/{fullname}.git", dist_git_dir
+        )
+        dist_git_repo.git.checkout(branch)
+        # make sure the commit is the one we are expecting
+        if dist_git_repo.branches[branch].commit.hexsha != event["end_commit"]:
+            raise RuntimeError(
+                f"HEAD of {branch} is not matching {event['end_commit']}, as expected."
+            )
+        # clone repo from source-git/ using ssh, so it can be pushed later on
+        src_git_ssh_url = project.get_git_urls()["ssh"]
+        src_git_dir = workdir / src_git_namespace / name
+        shutil.rmtree(src_git_dir, ignore_errors=True)
+        src_git_repo = git.Repo.clone_from(
+            src_git_ssh_url,
+            src_git_dir,
+        )
+        d2s = Dist2Src(
+            dist_git_path=dist_git_dir,
+            source_git_path=src_git_dir,
+        )
+        # if the branch exists, run update_source_git()
+        if branch in src_git_repo.branches:
+            d2s.update_source_git(branch, branch)
+        # if the branch does not exist, run conver()
+        else:
+            d2s.convert(branch, branch)
+        # push the result to source-git - how are we going to authenticate to be able to do this?
+        src_git_repo.git.push("origin", branch)

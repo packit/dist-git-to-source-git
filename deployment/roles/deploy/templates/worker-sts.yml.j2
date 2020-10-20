@@ -51,10 +51,16 @@ spec:
           envFrom:
             - configMapRef:
                 name: env-config
+            - configMapRef:
+                name: worker-config
+            - secretRef:
+                name: git-tokens
           command: ["/usr/bin/run_worker.sh"]
           volumeMounts:
             - name: log-files
               mountPath: /log-files
+            - name: worker-vol
+              mountPath: /workdir
           resources:
             limits:
               memory: "384Mi"
