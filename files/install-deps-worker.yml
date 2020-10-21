@@ -16,6 +16,8 @@
           - python3-celery
           - python3-redis
           - python3-lazy-object-proxy
+          - python3-ogr
+          - python3-packit
           - redis # redis-cli for debugging
           - python3-cccolutils # packitos dependency, otherwise we'd need gcc to compile it
           - gcc

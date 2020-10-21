@@ -50,3 +50,6 @@ dist_git_namespace: rpms
 
 # Namespace where the source-git repositories are stored in the forge
 src_git_namespace: source-git
+
+mqtt_host: mqtt.git.centos.org
+mqtt_topics: git.centos.org/#

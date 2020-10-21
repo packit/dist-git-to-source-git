@@ -25,3 +25,6 @@ branches_watched:
 dist_git_namespace: rpms
 
 src_git_namespace: source-git
+
+mqtt_host: mqtt.stg.centos.org
+mqtt_topics: git.stg.centos.org/#

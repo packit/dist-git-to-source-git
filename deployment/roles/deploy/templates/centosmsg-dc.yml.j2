@@ -25,9 +25,9 @@ spec:
           image: dist2src-centosmsg
           env:
             - name: MQTT_HOST
-              value: {{ "mqtt.git.centos.org" if deployment == "prod" else "mqtt.stg.centos.org" }}
+              value: {{ mqtt_host }}
             - name: MQTT_TOPICS
-              value: {{ "git.centos.org/#" if deployment == "prod" else "git.stg.centos.org/#" }}
+              value: {{ mqtt_topics }}
             - name: MQTT_SUBTOPICS
               value: git.receive
           envFrom:
