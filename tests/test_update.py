@@ -13,6 +13,7 @@ from tests.conftest import (
     TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT,
     run_dist2src,
     run_packit,
+    clone_package,
 )
 
 
@@ -27,16 +28,7 @@ def test_update(tmp_path: Path, package_name, branch):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    subprocess.check_call(
-        [
-            "git",
-            "clone",
-            "-b",
-            branch,
-            f"https://git.centos.org/rpms/{package_name}.git",
-            dist_git_path,
-        ]
-    )
+    clone_package(package_name, str(dist_git_path), branch=branch)
     subprocess.check_call(
         ["git", "reset", "--hard", "HEAD~1"],
         cwd=dist_git_path,
@@ -88,16 +80,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    subprocess.check_call(
-        [
-            "git",
-            "clone",
-            "-b",
-            branch,
-            f"https://git.centos.org/rpms/{package_name}.git",
-            dist_git_path,
-        ]
-    )
+    clone_package(package_name, str(dist_git_path), branch=branch)
 
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
@@ -157,16 +140,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    subprocess.check_call(
-        [
-            "git",
-            "clone",
-            "-b",
-            branch,
-            f"https://git.centos.org/rpms/{package_name}.git",
-            dist_git_path,
-        ]
-    )
+    clone_package(package_name, str(dist_git_path), branch=branch)
     subprocess.check_call(
         ["git", "reset", "--hard", old_version],
         cwd=dist_git_path,

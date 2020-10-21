@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from dist2src.core import Dist2Src
+from tests.conftest import clone_package
 from tests.test_convert import run_dist2src
 
 this_dir = Path(__file__).parent
@@ -144,10 +145,7 @@ def test_no_backup(tmp_path: Path):
     d = tmp_path / "d"
     d.mkdir()
     dist_git_path = d / package_name
-    subprocess.check_call(
-        ["git", "clone", f"https://git.centos.org/rpms/{package_name}.git"], cwd=d
-    )
-    subprocess.check_call(["git", "checkout", "c8"], cwd=dist_git_path)
+    clone_package(package_name, str(dist_git_path), branch="c8")
     b = dist_git_path / "BUILD" / "hyperv-daemons-0"
     run_dist2src(["-v", "run-prep", str(dist_git_path)], working_dir=dist_git_path)
     assert b.is_dir()
