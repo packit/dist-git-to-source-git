@@ -9,9 +9,7 @@ from pathlib import Path
 
 import click
 
-from dist2src.constants import VERY_VERY_HARD_PACKAGES
 from dist2src.core import Dist2Src
-
 
 logger = logging.getLogger(__name__)
 
@@ -215,15 +213,7 @@ def convert(ctx, origin: str, dest: str):
         source_git_path=Path(dest_dir),
         log_level=ctx.obj[VERBOSE_KEY],
     )
-    if d2s.package_name in VERY_VERY_HARD_PACKAGES:
-        d2s.convert_single_commit(origin_branch, dest_branch)
-    elif d2s.source_git_path.exists() and dest_branch in d2s.source_git.repo.branches:
-        logger.info(
-            "The source-git repository and branch exist. Updating existing source-git..."
-        )
-        d2s.update_source_git(origin_branch, dest_branch)
-    else:
-        d2s.convert(origin_branch, dest_branch)
+    d2s.convert(origin_branch, dest_branch)
 
 
 if __name__ == "__main__":

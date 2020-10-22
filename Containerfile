@@ -30,7 +30,11 @@ RUN $package_manager -y install dnf-plugins-core && \
     && $package_manager -y clean all \
     && pip3 install ipdb pytest
 
-RUN git config --system user.name "Packit" && git config --system user.email "packit"
+# https://stackoverflow.com/questions/6842687/the-remote-end-hung-up-unexpectedly-while-git-cloning
+# we are unable to clone kernel, hence the postBuffer thingy
+RUN git config --system user.name "Packit" \
+    && git config --system user.email "packit" \
+    && git config --system http.postBuffer 1048576000
 COPY .git /src/.git
 COPY dist2src /src/dist2src
 COPY README.md setup.cfg setup.py /src/
