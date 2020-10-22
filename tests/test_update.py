@@ -13,6 +13,7 @@ from tests.conftest import (
     TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT,
     run_dist2src,
     run_packit,
+    clone_package,
 )
 
 
@@ -27,16 +28,7 @@ def test_update(tmp_path: Path, package_name, branch):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    subprocess.check_call(
-        [
-            "git",
-            "clone",
-            "-b",
-            branch,
-            f"https://git.centos.org/rpms/{package_name}.git",
-            dist_git_path,
-        ]
-    )
+    clone_package(package_name, str(dist_git_path), branch=branch)
     subprocess.check_call(
         ["git", "reset", "--hard", "HEAD~1"],
         cwd=dist_git_path,
@@ -88,16 +80,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    subprocess.check_call(
-        [
-            "git",
-            "clone",
-            "-b",
-            branch,
-            f"https://git.centos.org/rpms/{package_name}.git",
-            dist_git_path,
-        ]
-    )
+    clone_package(package_name, str(dist_git_path), branch=branch)
 
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
@@ -157,16 +140,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    subprocess.check_call(
-        [
-            "git",
-            "clone",
-            "-b",
-            branch,
-            f"https://git.centos.org/rpms/{package_name}.git",
-            dist_git_path,
-        ]
-    )
+    clone_package(package_name, str(dist_git_path), branch=branch)
     subprocess.check_call(
         ["git", "reset", "--hard", old_version],
         cwd=dist_git_path,
@@ -206,3 +180,40 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
                 srpm_path,
             ]
         )
+
+
+def test_update_apr(tmp_path: Path):
+    """
+    Jirka found an issue that we cannot update several packages
+    which were created by an old version of d2s, one of them is apr
+    """
+    package_name = "apr"
+    dist_git_path = tmp_path / "d" / package_name
+    dg_branch = "c8s"
+    source_git_path = tmp_path / "s" / package_name
+    sg_branch = "c8"
+    clone_package(package_name, str(dist_git_path), branch=dg_branch)
+    clone_package(
+        package_name,
+        str(source_git_path),
+        branch=sg_branch,
+        namespace="source-git",
+        stg=True,
+    )
+    run_dist2src(
+        [
+            "-vvv",
+            "convert",
+            f"{dist_git_path}:{dg_branch}",
+            f"{source_git_path}:{sg_branch}",
+        ]
+    )
+    run_packit(
+        [
+            "--debug",
+            "srpm",
+        ],
+        working_dir=source_git_path,
+    )
+    srpm_path = next(source_git_path.glob("*.src.rpm"))
+    assert srpm_path.exists()

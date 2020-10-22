@@ -12,20 +12,12 @@ from tests.conftest import (
     TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT,
     run_dist2src,
     run_packit,
+    clone_package,
 )
 
 
 def convert_repo(package_name, dist_git_path, sg_path, branch="c8s"):
-    subprocess.check_call(
-        [
-            "git",
-            "clone",
-            "-b",
-            branch,
-            f"https://git.centos.org/rpms/{package_name}.git",
-            dist_git_path,
-        ]
-    )
+    clone_package(package_name, str(dist_git_path), branch=branch)
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
     )
