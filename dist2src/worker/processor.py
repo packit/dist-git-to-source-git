@@ -16,9 +16,9 @@ logger = getLogger(__name__)
 
 class Processor:
     def process_message(cls, event: dict, **kwargs):
-        workdir = Path(os.getenv("D2S_WORKDIR", "/dist2src"))
-        dist_git_url = os.getenv("D2S_DIST_GIT_URL", "https://git.centos.org")
-        src_git_url = os.getenv("D2S_SRC_GIT_URL", "https://git.stg.centos.org")
+        workdir = Path(os.getenv("D2S_WORKDIR", "/workdir"))
+        dist_git_host = os.getenv("D2S_DIST_GIT_HOST", "git.centos.org")
+        src_git_host = os.getenv("D2S_SRC_GIT_HOST", "git.stg.centos.org")
         src_git_token = os.getenv("D2S_SRC_GIT_TOKEN")
         dist_git_namespace = os.getenv("D2S_DIST_GIT_NAMESPACE", "rpms")
         src_git_namespace = os.getenv("D2S_SRC_GIT_NAMESPACE", "source-git")
@@ -43,8 +43,14 @@ class Processor:
             )
             return
         # Does this repository have a source-git equvalent?
-        service = PagureService(instance_url=src_git_url, token=src_git_token)
-        project = service.get_project(namespace=src_git_namespace, repo=name)
+        service = PagureService(
+            instance_url=f"https://{src_git_host}", token=src_git_token
+        )
+        # When the namespace is a fork, "fork" is singular when accessing
+        # the API, but plural in the Git URLs.
+        # Keep this here, so we can test with forks.
+        namespace = re.sub(r"^forks\/", "fork/", src_git_namespace)
+        project = service.get_project(namespace=namespace, repo=name)
         if not project.exists():
             # Log something, maybe count this
             logger.info(

@@ -14,8 +14,8 @@ auto_import_images: false
 
 api_key: ""
 
-dist_git_url: https://git.centos.org
-src_git_url: https://git.stg.centos.org
+dist_git_host: git.centos.org
+src_git_host: git.stg.centos.org
 
 branches_watched:
   - c8s

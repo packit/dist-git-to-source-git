@@ -37,6 +37,9 @@ spec:
         - name: log-files
           persistentVolumeClaim:
             claimName: log-files-pvc
+        - name: d2s-ssh
+          secret:
+            secretName: d2s-ssh
       containers:
         - name: worker
           image: worker:latest
@@ -61,6 +64,8 @@ spec:
               mountPath: /log-files
             - name: worker-vol
               mountPath: /workdir
+            - name: d2s-ssh
+              mountPath: /d2s-ssh
           resources:
             limits:
               memory: "384Mi"
