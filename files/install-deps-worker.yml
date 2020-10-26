@@ -18,6 +18,7 @@
           - python3-redis
           - python3-lazy-object-proxy
           - redis # redis-cli for debugging
+          - python3-cccolutils # packitos dependency, otherwise we'd need gcc to compile it
     - name: Install pip deps
       pip:
         name:
