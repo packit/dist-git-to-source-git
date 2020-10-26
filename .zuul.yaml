@@ -15,7 +15,7 @@
     parent: base
     description: Run tests
     run: files/zuul-tests.yaml
-    timeout: 2400 # 40 minutes
+    timeout: 3600 # 60 minutes
 
 - job:
     name: dist2src-deployment-tests
