@@ -392,7 +392,7 @@ class Dist2Src:
         )
 
         # configure packit
-        self.add_packit_config()
+        self.add_packit_config(commit=True)
         self.copy_spec()
         self.source_git.stage(add="SPECS")
         self.source_git.commit(message="Add spec-file for the distribution")

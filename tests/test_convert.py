@@ -34,6 +34,9 @@ def test_conversions(tmp_path: Path, package_name, branch):
     sg_path.mkdir(parents=True)
     convert_repo(package_name, dist_git_path, sg_path, branch=branch)
     os.chdir(sg_path)
+    # the source-git repo cannot be dirty after the conversion
+    is_dirty = subprocess.check_output(["git", "status", "--short"])
+    assert not is_dirty
 
     run_packit(
         [
