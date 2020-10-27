@@ -23,6 +23,7 @@ from dist2src.constants import (
     START_TAG,
     TARGETS,
     HOOKS,
+    VERY_VERY_HARD_PACKAGES,
 )
 
 logger = logging.getLogger(__name__)
@@ -367,10 +368,8 @@ class Dist2Src:
 
         self.source_git.fetch(dist_git_BUILD_path, f"+{source_branch}:{dest_branch}")
 
-    def convert(self, origin_branch: str, dest_branch: str):
-        """
-        Convert a dist-git repository into a source-git repo.
-        """
+    def perform_convert(self, origin_branch: str, dest_branch: str):
+        """ Run all the steps to get a source-git repo from dist-git """
         self.dist_git.checkout(branch=origin_branch)
         if self.source_git.repo.active_branch.name != dest_branch:
             update = False
@@ -407,6 +406,26 @@ class Dist2Src:
 
         # get all the patch-commits
         self.rebase_patches(from_branch=TEMP_SG_BRANCH, to_branch=dest_branch)
+
+    def convert(self, origin_branch: str, dest_branch: str):
+        """
+        Convert a dist-git repository into a source-git repo.
+        Update the source-git repo if it exists.
+
+        This is the entrypoint method.
+        """
+        if self.package_name in VERY_VERY_HARD_PACKAGES:
+            self.convert_single_commit(origin_branch, dest_branch)
+        elif (
+            self.source_git_path.exists()
+            and dest_branch in self.source_git.repo.branches
+        ):
+            logger.info(
+                "The source-git repository and branch exist. Updating existing source-git..."
+            )
+            self.update_source_git(origin_branch, dest_branch)
+        else:
+            self.perform_convert(origin_branch, dest_branch)
 
     def copy_prep_content(self):
         """
@@ -630,7 +649,7 @@ class Dist2Src:
             commit_body="Reverting patches so we can apply the latest update\n"
             "and changes can be seen in the spec file and sources.",
         )
-        self.convert(origin_branch=origin_branch, dest_branch=new_dest_branch)
+        self.perform_convert(origin_branch=origin_branch, dest_branch=new_dest_branch)
 
         # fast-forward old branch
         self.source_git.fast_forwad(branch=dest_branch, to_ref=new_dest_branch)
