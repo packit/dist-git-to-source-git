@@ -6,14 +6,36 @@ and emulates functionality... just kidding, it's just constants.
 """
 from typing import Iterable, Dict, Any
 
-# these packages have complex %prep's which cannot be turned
+# These packages have complex %prep's which cannot be turned
 # into a proper source-git repo - hence we just run the %prep
-# and initiate a single-commit repo for these
+# and initiate a single-commit repo for these.
+# Numbers in comments are issues in this repo.
 VERY_VERY_HARD_PACKAGES: Iterable[str] = (
-    "gcc",
+    "gcc",  # missing deps: docbook5-style-xsl
     "hyperv-daemons",
     "kernel",
-    "libreport",
+    "libreport",  # missing deps: libtar-devel, satyr-devel
+    "abrt",  # #49
+    "binutils",  # #97
+    "ca-certificates",  # #92
+    "coreutils",  # #86
+    "freeradius",  # #111
+    "ksh",  # #56
+    "libreport",  # #49
+    "libsemanage",  # #97
+    "libselinux",  # #97
+    "nspr",  # #85
+    "nss",  # #97, #58
+    "openldap",  # #92, #58
+    "openssh",  # #58
+    "openssl",  # #86
+    "pam",  # #86
+    "policycoreutils",  # #55
+    "samba",  # #72
+    "satyr",  # #49
+    "tzdata",  # #85
+    "tog-pegasus",  # #86
+    "unbound",  # #58
 )
 
 # build and test targets
