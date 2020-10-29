@@ -1,10 +1,15 @@
 # Celery worker which runs tasks from centosmsg listener
 
-FROM docker.io/usercont/base
+ARG base_image=centos:8
+ARG package_manager
+FROM $base_image
 
+ENV package_manager ${package_manager:-yum -y}
 COPY files/install-deps-worker.yml /src/
-RUN ansible-playbook -vv -c local -i localhost, /src/install-deps-worker.yml \
-    && dnf clean all
+RUN $package_manager install epel-release \
+    && $package_manager install ansible \
+    && ansible-playbook -vv -c local -i localhost, /src/install-deps-worker.yml \
+    && $package_manager clean all
 
 COPY setup.py setup.cfg files/run_worker.sh /src/
 COPY dist2src/ /src/dist2src/
