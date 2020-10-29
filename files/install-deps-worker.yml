@@ -12,16 +12,23 @@
           - python3-click
           - python3-GitPython
           - python3-sh
-          - rebase-helper
           - python3-timeout-decorator
           - python3-celery
           - python3-redis
           - python3-lazy-object-proxy
           - redis # redis-cli for debugging
           - python3-cccolutils # packitos dependency, otherwise we'd need gcc to compile it
+          - gcc
+          - git
+          - krb5-devel
+          - python3-devel
+          - python3-pip
+          - rpm-build
     - name: Install pip deps
       pip:
         name:
-          - sentry-sdk
+          - sentry-sdk==0.19.1
+          - rebasehelper==0.23.1
+        executable: pip3
     - name: Chek if all pip packages have all dependencies installed
       command: pip3 check
