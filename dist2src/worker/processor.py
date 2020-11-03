@@ -78,15 +78,21 @@ class Processor:
             src_git_ssh_url,
             src_git_dir,
         )
+
+        # check-out the source-git branch, if already exists,
+        # so that 'convert' knows that this is an update
+        remote_heads = [
+            ref.remote_head
+            for ref in src_git_repo.references
+            if isinstance(ref, git.RemoteReference)
+        ]
+        if branch in remote_heads:
+            src_git_repo.git.checkout(branch)
+
         d2s = Dist2Src(
             dist_git_path=dist_git_dir,
             source_git_path=src_git_dir,
         )
-        # if the branch exists, run update_source_git()
-        if branch in src_git_repo.branches:
-            d2s.update_source_git(branch, branch)
-        # if the branch does not exist, run conver()
-        else:
-            d2s.convert(branch, branch)
+        d2s.convert(branch, branch)
         # push the result to source-git - how are we going to authenticate to be able to do this?
         src_git_repo.git.push("origin", branch)
