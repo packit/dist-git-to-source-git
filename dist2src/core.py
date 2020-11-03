@@ -137,6 +137,11 @@ class GitRepo:
             if theirs
             else {}
         )
+        if self.repo.is_dirty():
+            raise RuntimeError(
+                "We wanted to cherry-pick the base commit but the source-git repo "
+                "is dirty when it shouldn't be."
+            )
         try:
             self.repo.git.cherry_pick(f"{from_branch}~{num_commits - 1}", **git_options)
         except GitCommandError as ex:
