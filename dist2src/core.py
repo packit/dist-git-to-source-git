@@ -74,12 +74,14 @@ class GitRepo:
         @param orphan: Create a branch with disconnected history.
         @param create_branch: Create branch if it doesn't exist (using -B)
         """
-        options = {}
         if orphan:
-            options["orphan"] = branch
-
-        if options:
-            self.repo.git.checkout(**options)
+            self.repo.git.checkout("--orphan", branch)
+            # when creating an orphan branch, git preserves files in the index
+            # we don't want those, hush!
+            if self.repo.index.entries:
+                for entry in self.repo.index.entries:
+                    # entry = (path, stage number) -- see BaseIndexEntry.stage
+                    self.repo.index.remove(entry[0], working_tree=True, r=True, f=True)
         elif create_branch:
             self.repo.git.checkout("-B", branch)
         else:
@@ -378,7 +380,10 @@ class Dist2Src:
         self.dist_git.checkout(branch=origin_branch)
         if self.source_git.repo.active_branch.name != dest_branch:
             update = False
-            self.source_git.checkout(branch=dest_branch, orphan=True)
+            if dest_branch in [branch.name for branch in self.source_git.repo.branches]:
+                self.source_git.checkout(branch=dest_branch)
+            else:
+                self.source_git.checkout(branch=dest_branch, orphan=True)
         else:
             update = True
 
