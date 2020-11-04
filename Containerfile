@@ -28,7 +28,7 @@ RUN $package_manager -y install dnf-plugins-core && \
     xmlto \
     && $package_manager --enablerepo=PowerTools --setopt=PowerTools.module_hotfixes=true install javapackages-local \
     && $package_manager -y clean all \
-    && pip3 install ipdb pytest
+    && pip3 install ipdb pytest flexmock
 
 # https://stackoverflow.com/questions/6842687/the-remote-end-hung-up-unexpectedly-while-git-cloning
 # we are unable to clone kernel, hence the postBuffer thingy
