@@ -165,6 +165,7 @@ class GitRepo:
         self.commit(commit_message, body=commit_body)
         # clear the working-tree
         self.repo.git.reset("HEAD", hard=True)
+        self.clean()  # `reset --hard HEAD` is not enough to clean untracked files
 
     def clean(self):
         """
