@@ -11,8 +11,6 @@ from packit.cli.packit_base import packit_base
 from packit.utils import cwd
 
 TEST_PROJECTS_WITH_BRANCHES = [
-    ("rpm", "c8s"),  # %autosetup and lots of patches
-    ("drpm", "c8s"),  # easy
     # %autosetup -S git_am + needs https://koji.mbox.centos.org/koji/taginfo?tagID=342
     ("pacemaker", "c8s"),
     ("systemd", "c8s"),  # -S git_am
@@ -55,10 +53,6 @@ TEST_PROJECTS_WITH_BRANCHES = [
 
 # these packages only have a single commit in the respective dist-git branch
 TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT = [
-    (
-        "HdrHistogram_c",
-        "c8s",
-    ),  # eaaaaasy
     ("units", "c8"),  # autosetup + files created during %prep
     ("vhostmd", "c8s"),  # -S git, eazy
     ("acpica-tools", "c8"),  # %setup, %patch, unpack %SOURCE1, a ton of operations

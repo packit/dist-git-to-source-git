@@ -74,12 +74,14 @@ class GitRepo:
         @param orphan: Create a branch with disconnected history.
         @param create_branch: Create branch if it doesn't exist (using -B)
         """
-        options = {}
         if orphan:
-            options["orphan"] = branch
-
-        if options:
-            self.repo.git.checkout(**options)
+            self.repo.git.checkout("--orphan", branch)
+            # when creating an orphan branch, git preserves files in the index
+            # we don't want those, hush!
+            if self.repo.index.entries:
+                for entry in self.repo.index.entries:
+                    # entry = (path, stage number) -- see BaseIndexEntry.stage
+                    self.repo.index.remove(entry[0], working_tree=True, r=True, f=True)
         elif create_branch:
             self.repo.git.checkout("-B", branch)
         else:
@@ -137,6 +139,11 @@ class GitRepo:
             if theirs
             else {}
         )
+        if self.repo.is_dirty():
+            raise RuntimeError(
+                "We wanted to cherry-pick the base commit but the source-git repo "
+                "is dirty when it shouldn't be."
+            )
         try:
             self.repo.git.cherry_pick(f"{from_branch}~{num_commits - 1}", **git_options)
         except GitCommandError as ex:
@@ -158,6 +165,7 @@ class GitRepo:
         self.commit(commit_message, body=commit_body)
         # clear the working-tree
         self.repo.git.reset("HEAD", hard=True)
+        self.clean()  # `reset --hard HEAD` is not enough to clean untracked files
 
     def clean(self):
         """
@@ -167,7 +175,7 @@ class GitRepo:
         # to remove the submodules/git repos as well.
         self.repo.git.clean("-xdff")
 
-    def fast_forwad(self, branch, to_ref):
+    def fast_forward(self, branch, to_ref):
         self.checkout(branch)
         self.repo.git.merge(to_ref, ff_only=True)
 
@@ -373,7 +381,10 @@ class Dist2Src:
         self.dist_git.checkout(branch=origin_branch)
         if self.source_git.repo.active_branch.name != dest_branch:
             update = False
-            self.source_git.checkout(branch=dest_branch, orphan=True)
+            if dest_branch in [branch.name for branch in self.source_git.repo.branches]:
+                self.source_git.checkout(branch=dest_branch)
+            else:
+                self.source_git.checkout(branch=dest_branch, orphan=True)
         else:
             update = True
 
@@ -652,4 +663,4 @@ class Dist2Src:
         self.perform_convert(origin_branch=origin_branch, dest_branch=new_dest_branch)
 
         # fast-forward old branch
-        self.source_git.fast_forwad(branch=dest_branch, to_ref=new_dest_branch)
+        self.source_git.fast_forward(branch=dest_branch, to_ref=new_dest_branch)
