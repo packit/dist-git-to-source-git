@@ -175,7 +175,7 @@ class GitRepo:
         # to remove the submodules/git repos as well.
         self.repo.git.clean("-xdff")
 
-    def fast_forwad(self, branch, to_ref):
+    def fast_forward(self, branch, to_ref):
         self.checkout(branch)
         self.repo.git.merge(to_ref, ff_only=True)
 
@@ -663,4 +663,4 @@ class Dist2Src:
         self.perform_convert(origin_branch=origin_branch, dest_branch=new_dest_branch)
 
         # fast-forward old branch
-        self.source_git.fast_forwad(branch=dest_branch, to_ref=new_dest_branch)
+        self.source_git.fast_forward(branch=dest_branch, to_ref=new_dest_branch)
