@@ -29,6 +29,7 @@
         name:
           - sentry-sdk==0.19.1
           - rebasehelper==0.23.1
+          - prometheus_client
         executable: pip3
-    - name: Chek if all pip packages have all dependencies installed
+    - name: Check if all pip packages have all dependencies installed
       command: pip3 check
