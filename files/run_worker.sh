@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+set -eu
+
 # $APP defines where's the module (or package)
 if [[ -z ${APP} ]]; then
     echo "APP not defined or empty, exiting"
@@ -14,6 +16,14 @@ elif [[ ${DEPLOYMENT} == "prod" ]]; then
 else
   LOGLEVEL="DEBUG"
 fi
+
+mkdir --mode=0700 -p "${HOME}/.ssh"
+pushd "${HOME}/.ssh"
+install -m 0600 /d2s-ssh/id_rsa .
+install -m 0644 /d2s-ssh/id_rsa.pub .
+grep -q "${D2S_DIST_GIT_HOST}" known_hosts || ssh-keyscan "${D2S_DIST_GIT_HOST}" >>known_hosts
+grep -q "${D2S_SRC_GIT_HOST}" known_hosts || ssh-keyscan "${D2S_SRC_GIT_HOST}" >>known_hosts
+popd
 
 # concurrency: Number of concurrent worker processes/threads/green threads executing tasks.
 # prefetch-multiplier: How many messages to prefetch at a time multiplied by the number of concurrent processes.

@@ -37,6 +37,9 @@ spec:
         - name: log-files
           persistentVolumeClaim:
             claimName: log-files-pvc
+        - name: d2s-ssh
+          secret:
+            secretName: d2s-ssh
       containers:
         - name: worker
           image: worker:latest
@@ -51,10 +54,18 @@ spec:
           envFrom:
             - configMapRef:
                 name: env-config
+            - configMapRef:
+                name: worker-config
+            - secretRef:
+                name: git-tokens
           command: ["/usr/bin/run_worker.sh"]
           volumeMounts:
             - name: log-files
               mountPath: /log-files
+            - name: worker-vol
+              mountPath: /workdir
+            - name: d2s-ssh
+              mountPath: /d2s-ssh
           resources:
             limits:
               memory: "384Mi"

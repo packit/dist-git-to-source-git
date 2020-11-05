@@ -29,3 +29,27 @@ deployment: "{{ lookup('env', 'DEPLOYMENT') }}"
 
 # Whether to periodically import image(s) from registry to image stream(s)
 auto_import_images: true
+
+# Path within the worker container where the work is done
+workdir: /workdir
+
+# URL for the forge where the dist-git and source-git repos are stored.
+# For now, the forge is expected to be running Pagure.
+# The corresponding tokens are expected to be stored in the secrets dir.
+dist_git_host: git.centos.org
+src_git_host: git.centos.org
+
+# Dist-git branches which should be monitored for changes
+branches_watched:
+  - c8s
+  - c8
+  - c8s-stream-rhel
+
+# Namespace where the dist-git repositories are stored in the forge
+dist_git_namespace: rpms
+
+# Namespace where the source-git repositories are stored in the forge
+src_git_namespace: source-git
+
+mqtt_host: mqtt.git.centos.org
+mqtt_topics: git.centos.org/#

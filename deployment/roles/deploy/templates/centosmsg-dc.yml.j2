@@ -25,14 +25,11 @@ spec:
           image: dist2src-centosmsg
           env:
             - name: MQTT_HOST
-              value: {{ "mqtt.git.centos.org" if deployment == "prod" else "mqtt.stg.centos.org" }}
+              value: {{ mqtt_host }}
             - name: MQTT_TOPICS
-              value: {{ "git.centos.org/#" if deployment == "prod" else "git.stg.centos.org/#" }}
+              value: {{ mqtt_topics }}
             - name: MQTT_SUBTOPICS
               value: git.receive
-            # temporary, delete when workers are configured and implementation is done
-            - name: DISABLE_SENDING_CELERY_TASKS
-              value: disable
           envFrom:
             - configMapRef:
                 name: env-config

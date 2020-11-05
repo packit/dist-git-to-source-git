@@ -1,0 +1,17 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+# https://docs.openshift.com/container-platform/4.5/builds/builds-configmaps.html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: worker-config
+type: Opaque
+data:
+  D2S_WORKDIR: "{{ workdir }}"
+  D2S_DIST_GIT_HOST: "{{ dist_git_host }}"
+  D2S_DIST_GIT_NAMESPACE: "{{ dist_git_namespace }}"
+  D2S_SRC_GIT_HOST: "{{ src_git_host }}"
+  D2S_SRC_GIT_NAMESPACE: "{{ src_git_namespace }}"
+  D2S_BRANCHES_WATCHED: "{{ branches_watched | join(',') }}"

@@ -12,5 +12,6 @@
   with_template:
     - env-config-cm.yml.j2
     - nginx-cm.yml.j2
+    - worker-config-cm.yml.j2
   tags:
     - always

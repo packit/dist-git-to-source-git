@@ -13,3 +13,18 @@ push_dev_images: true
 auto_import_images: false
 
 api_key: ""
+
+dist_git_host: git.centos.org
+src_git_host: git.stg.centos.org
+
+branches_watched:
+  - c8s
+  - c8
+  - c8s-stream-rhel
+
+dist_git_namespace: rpms
+
+src_git_namespace: source-git
+
+mqtt_host: mqtt.stg.centos.org
+mqtt_topics: git.stg.centos.org/#

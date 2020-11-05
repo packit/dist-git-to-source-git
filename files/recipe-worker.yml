@@ -1,6 +1,8 @@
 ---
 - name: Install dist2src worker
   hosts: all
+  vars:
+    home_path: "{{ lookup('env', 'HOME') }}"
   tasks:
     - name: Install dist2src
       pip:
@@ -15,3 +17,12 @@
         src: run_worker.sh
         dest: /usr/bin/run_worker.sh
         mode: 0777
+    - name: Create packit home dir
+      file:
+        state: directory
+        path: "{{ home_path }}"
+        mode: 0776
+    - name: Copy gitconfig
+      copy:
+        src: gitconfig
+        dest: "{{ home_path }}/.gitconfig"
