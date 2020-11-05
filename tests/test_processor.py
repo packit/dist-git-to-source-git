@@ -10,6 +10,7 @@ from flexmock import flexmock
 from pathlib import Path
 from ogr import PagureService
 from dist2src.worker.processor import Processor
+from dist2src.worker.monitoring import Pushgateway
 from dist2src.worker import processor
 from dist2src.core import Dist2Src
 
@@ -27,6 +28,9 @@ def test_event_not_for_dist_git_namespace(caplog):
     )
     flexmock(os).should_receive("getenv").and_return("blah")
     flexmock(Dist2Src).should_receive("convert").never()
+    flexmock(Pushgateway).should_receive("push_received_message").with_args(
+        ignored=True
+    ).once()
 
     with caplog.at_level(logging.INFO):
         Processor().process_message(
@@ -41,6 +45,9 @@ def test_event_not_for_branch(caplog):
     the event is ignored and the logs indicate this.
     """
     flexmock(Dist2Src).should_receive("convert").never()
+    flexmock(Pushgateway).should_receive("push_received_message").with_args(
+        ignored=True
+    ).once()
 
     with caplog.at_level(logging.INFO):
         Processor().process_message(
@@ -64,6 +71,9 @@ def test_no_corresponding_source_git(caplog):
         .and_return(project)
     )
     project.should_receive("exists").and_return(False)
+    flexmock(Pushgateway).should_receive("push_received_message").with_args(
+        ignored=True
+    ).once()
     flexmock(Dist2Src).should_receive("convert").never()
 
     with caplog.at_level(logging.INFO):
@@ -130,11 +140,15 @@ def test_conversion(caplog):
         .and_return(d2s)
     )
     d2s.should_receive("convert").with_args("c8s", "c8s")
-
     # Result is pushed.
     src_git_repo.git.should_receive("push").with_args(
         "origin", "c8s", tags=True, force=True
     ).once()
+
+    flexmock(Pushgateway).should_receive("push_received_message").with_args(
+        ignored=False
+    ).once()
+    flexmock(Pushgateway).should_receive("push_created_update").once()
 
     Processor().process_message(
         {

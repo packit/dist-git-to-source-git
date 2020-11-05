@@ -40,8 +40,8 @@ class Pushgateway:
         self.created_updates.inc()
         self.push()
 
-    def push_received_message(self, processed: bool):
+    def push_received_message(self, ignored: bool):
         self.received_messages.labels(
-            result="processed" if processed else "not_processed"
+            result="ignored" if ignored else "not_ignored"
         ).inc()
         self.push()

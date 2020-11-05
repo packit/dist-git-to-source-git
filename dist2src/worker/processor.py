@@ -10,6 +10,7 @@ import git
 
 from ogr import PagureService
 from dist2src.core import Dist2Src
+from dist2src.worker.monitoring import Pushgateway
 
 logger = getLogger(__name__)
 
@@ -33,6 +34,7 @@ class Processor:
             logger.info(
                 f"Ignore update event for {fullname}. Not in the '{dist_git_namespace}' namespace."
             )
+            Pushgateway().push_received_message(ignored=True)
             return
 
         # Should this branch be updated?
@@ -42,6 +44,7 @@ class Processor:
                 f"Branch {event['branch']!r} is not one of the "
                 f"watched branches: {branches_watched}."
             )
+            Pushgateway().push_received_message(ignored=True)
             return
 
         # Does this repository have a source-git equvalent?
@@ -58,8 +61,10 @@ class Processor:
                 f"Ignore update event for {fullname}. "
                 "The corresponding source-git repo does not exist."
             )
+            Pushgateway().push_received_message(ignored=True)
             return
 
+        Pushgateway().push_received_message(ignored=False)
         # Clone repo from rpms/ and checkout the branch.
         dist_git_dir = workdir / fullname
         shutil.rmtree(dist_git_dir, ignore_errors=True)
@@ -100,5 +105,7 @@ class Processor:
         d2s.convert(branch, branch)
 
         # Push the result to source-git.
+
         # Update moves sg-start tag, we need --tags --force to move it in remote.
         src_git_repo.git.push("origin", branch, tags=True, force=True)
+        Pushgateway().push_created_update()
