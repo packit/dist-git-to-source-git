@@ -100,4 +100,5 @@ class Processor:
         d2s.convert(branch, branch)
 
         # Push the result to source-git.
-        src_git_repo.git.push("origin", branch)
+        # Update moves sg-start tag, we need --tags --force to move it in remote.
+        src_git_repo.git.push("origin", branch, tags=True, force=True)
