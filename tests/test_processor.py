@@ -5,8 +5,8 @@ import os
 import logging
 import shutil
 import git
-import flexmock
 
+from flexmock import flexmock
 from pathlib import Path
 from ogr import PagureService
 from dist2src.worker.processor import Processor
@@ -132,7 +132,9 @@ def test_conversion(caplog):
     d2s.should_receive("convert").with_args("c8s", "c8s")
 
     # Result is pushed.
-    src_git_repo.git.should_receive("push").with_args("origin", "c8s").once()
+    src_git_repo.git.should_receive("push").with_args(
+        "origin", "c8s", tags=True, force=True
+    ).once()
 
     Processor().process_message(
         {
