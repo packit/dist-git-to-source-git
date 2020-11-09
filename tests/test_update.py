@@ -99,20 +99,24 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
         [
             "--debug",
             "srpm",
-            "--output",
-            str(sg_path / f"{package_name}.src.rpm"),
-            str(sg_path),
-        ]
+        ],
+        working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
     srpm_path = next(sg_path.glob("*.src.rpm"))
     assert srpm_path.exists()
 
     # Check that patch commits are same
     assert len(first_round_commits) == len(second_round_commits)
+    # we cannot use git-diff here b/c theu may be additional changes
+    # to tree from %prep after the first conversion
     for first, second in zip(first_round_commits, second_round_commits):
-        assert b"" == subprocess.check_output(
-            ["git", "-C", str(sg_path), "diff", first.hexsha, second.hexsha]
-        )
+        # we could also use first.stats here but it's horribly
+        # inefficient and takes minutes to evaluate
+        for idx, tree in enumerate(first.tree.trees):
+            if tree.path == "autom4te.cache":  # cache, which can change
+                continue
+            assert tree == second.tree.trees[idx]
+        assert first.tree.blobs == second.tree.blobs
 
     if MOCK_BUILD:
         subprocess.check_call(
@@ -163,10 +167,8 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
         [
             "--debug",
             "srpm",
-            "--output",
-            str(sg_path / f"{package_name}.src.rpm"),
-            str(sg_path),
-        ]
+        ],
+        working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
     srpm_path = next(sg_path.glob("*.src.rpm"))
     assert srpm_path.exists()

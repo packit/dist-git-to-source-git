@@ -423,7 +423,8 @@ class Dist2Src:
                 ".git repo not present in the BUILD/ dir after running %prep"
             )
         BUILD_repo = GitRepo(self.BUILD_repo_path)
-        BUILD_repo.commit_all(message="Changes after running %prep")
+        # since this is not a patch, we want packit to ignore it
+        BUILD_repo.commit_all(message="Changes after running %prep\n\nignore: true")
         self.fetch_branch(source_branch="master", dest_branch=TEMP_SG_BRANCH)
         self.source_git.cherry_pick_base(
             from_branch=TEMP_SG_BRANCH, to_branch=dest_branch, theirs=update
@@ -629,16 +630,6 @@ class Dist2Src:
         FROM_BRANCH is cleaned up (deleted).
         """
         logger.info(f"Rebase patches from {from_branch} onto {to_branch}.")
-        self.source_git.checkout(from_branch)
-
-        # FIXME: don't call out to source_git.repo directly
-        if self.source_git.repo.head.commit.message == "Changes after running %prep\n":
-            logger.info("Moving the commit with %prep artifacts behind patches.")
-            self.source_git.checkout(to_branch)
-            self.source_git.repo.git.cherry_pick(from_branch)
-            self.source_git.create_tag(tag=START_TAG, branch=to_branch)
-            self.source_git.checkout(from_branch)
-            self.source_git.repo.git.reset("--hard", "HEAD^")
 
         self.source_git.checkout(to_branch)
         commits_to_cherry_pick = [
