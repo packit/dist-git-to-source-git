@@ -31,4 +31,25 @@ RUN curl --output /usr/bin/get_sources.sh https://git.centos.org/centos-git-comm
 COPY macros.packit /usr/lib/rpm/macros.d/macros.packit
 COPY packitpatch /usr/bin/packitpatch
 
+# Tools required by the %prep section of some packages
+# PowerTools repo installed for gtk-doc
+RUN $package_manager -y install dnf-plugins-core && \
+    $package_manager config-manager --set-enabled PowerTools && \
+    $package_manager -y install \
+    bison \
+    flex \
+    make \
+    autoconf \
+    automake \
+    gettext-devel \
+    sscg \
+    libtool \
+    dos2unix \
+    gtk-doc \
+    perl-devel \
+    rubygems \
+    xmlto \
+    && $package_manager --enablerepo=PowerTools --setopt=PowerTools.module_hotfixes=true install javapackages-local \
+    && $package_manager -y clean all
+
 CMD ["/usr/bin/run_worker.sh"]
