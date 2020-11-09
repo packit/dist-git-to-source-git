@@ -227,3 +227,54 @@ def test_update_existing(tmp_path: Path, package):
     )
     srpm_path = next(source_git_path.glob("*.src.rpm"))
     assert srpm_path.exists()
+
+
+def test_update_catch(tmp_path: Path):
+    """
+    make sure we can update package catch and
+    check the repo is in expected state after the update
+    """
+    package = "catch"
+    dist_git_path = tmp_path / "d" / package
+    dg_branch = "c8"
+    source_git_path = tmp_path / "s" / package
+    sg_branch = "c8"
+    clone_package(package, str(dist_git_path), branch=dg_branch)
+    clone_package(
+        package,
+        str(source_git_path),
+        branch="master",
+        namespace="source-git",
+        stg=True,
+    )
+    run_dist2src(
+        [
+            "-vvv",
+            "convert",
+            f"{dist_git_path}:{dg_branch}",
+            f"{source_git_path}:{sg_branch}",
+        ]
+    )
+    run_packit(
+        [
+            "--debug",
+            "srpm",
+        ],
+        working_dir=source_git_path,
+    )
+    srpm_path = next(source_git_path.glob("*.src.rpm"))
+    assert srpm_path.exists()
+    git_log_out = subprocess.check_output(
+        ["git", "log", "--pretty=format:%s", "origin/c8.."], cwd=source_git_path
+    ).decode()
+    # the line below is really fragile
+    # if it breaks, navigate to the source-git repo and check git history
+    assert (
+        git_log_out
+        == """Changes after running %prep
+Add sources defined in the spec file
+Add spec-file for the distribution
+.packit.yaml
+catch-2.2.1 base
+Prepare for a new update"""
+    )
