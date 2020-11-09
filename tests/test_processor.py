@@ -141,8 +141,11 @@ def test_conversion(caplog):
     )
     d2s.should_receive("convert").with_args("c8s", "c8s")
     # Result is pushed.
+    src_git_repo.git.should_receive("push").with_args("origin", "c8s").once()
+
+    # Start tag is force pushed
     src_git_repo.git.should_receive("push").with_args(
-        "origin", "c8s", tags=True, force=True
+        "origin", tags=True, force=True
     ).once()
 
     flexmock(Pushgateway).should_receive("push_received_message").with_args(
