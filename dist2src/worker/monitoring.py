@@ -28,6 +28,10 @@ class Pushgateway:
         )
 
     def push(self):
+        """
+        Push collected metrics to Pushgateway
+        :return:
+        """
         if not self.pushgateway_address:
             logger.debug("Pushgateway address not defined.")
             return
@@ -37,10 +41,19 @@ class Pushgateway:
         )
 
     def push_created_update(self):
+        """
+        Push info about created update to Pushgateway
+        :return:
+        """
         self.created_updates.inc()
         self.push()
 
     def push_received_message(self, ignored: bool):
+        """
+        Push info about received message to Pushgateway
+        :param ignored: whether the received message was ignored or processed
+        :return:
+        """
         self.received_messages.labels(
             result="ignored" if ignored else "not_ignored"
         ).inc()
