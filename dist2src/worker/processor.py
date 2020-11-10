@@ -11,6 +11,7 @@ import git
 from ogr import PagureService
 from dist2src.core import Dist2Src
 from dist2src.worker.monitoring import Pushgateway
+from dist2src.worker.logging import set_logging_to_file
 
 logger = getLogger(__name__)
 
@@ -65,6 +66,8 @@ class Processor:
             return
 
         Pushgateway().push_received_message(ignored=False)
+        set_logging_to_file(repo_name=name, commit_sha=event["end_commit"])
+
         # Clone repo from rpms/ and checkout the branch.
         dist_git_dir = workdir / fullname
         shutil.rmtree(dist_git_dir, ignore_errors=True)

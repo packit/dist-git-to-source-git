@@ -5,6 +5,7 @@ import os
 import logging
 import shutil
 import git
+from dist2src.worker import logging as our_logging
 
 from flexmock import flexmock
 from pathlib import Path
@@ -149,6 +150,8 @@ def test_conversion(caplog):
         ignored=False
     ).once()
     flexmock(Pushgateway).should_receive("push_created_update").once()
+
+    flexmock(our_logging).should_receive("set_logging_to_file")
 
     Processor().process_message(
         {
