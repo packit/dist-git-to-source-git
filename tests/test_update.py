@@ -3,6 +3,7 @@
 
 import subprocess
 from pathlib import Path
+from typing import Union
 
 import git
 import pytest
@@ -15,6 +16,11 @@ from tests.conftest import (
     run_packit,
     clone_package,
 )
+
+
+def assert_repo_is_not_dirty(repo_path: Union[str, Path]):
+    is_dirty = subprocess.check_output(["git", "status", "--short"], cwd=repo_path)
+    assert not is_dirty
 
 
 @pytest.mark.parametrize("package_name,branch", TEST_PROJECTS_WITH_BRANCHES)
@@ -37,6 +43,8 @@ def test_update(tmp_path: Path, package_name, branch):
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
     )
+    # the source-git repo cannot be dirty after the conversion
+    assert_repo_is_not_dirty(sg_path)
 
     subprocess.check_call(
         ["git", "pull", "origin", branch],
@@ -46,6 +54,7 @@ def test_update(tmp_path: Path, package_name, branch):
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
     )
+    assert_repo_is_not_dirty(sg_path)
 
     run_packit(
         [
@@ -85,6 +94,8 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
     )
+    # the source-git repo cannot be dirty after the conversion
+    assert_repo_is_not_dirty(sg_path)
 
     sg_repo = git.Repo(path=sg_path)
     first_round_commits = list(sg_repo.iter_commits("sg-start..HEAD"))
@@ -92,6 +103,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
     )
+    assert_repo_is_not_dirty(sg_path)
 
     second_round_commits = list(sg_repo.iter_commits("sg-start..HEAD"))
 
@@ -153,6 +165,8 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
     )
+    # the source-git repo cannot be dirty after the conversion
+    assert_repo_is_not_dirty(sg_path)
 
     subprocess.check_call(
         ["git", "pull", "origin", branch],
@@ -162,6 +176,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
     )
+    assert_repo_is_not_dirty(sg_path)
 
     run_packit(
         [
@@ -220,6 +235,7 @@ def test_update_existing(tmp_path: Path, package):
             f"{source_git_path}:{sg_branch}",
         ]
     )
+    assert_repo_is_not_dirty(source_git_path)
     run_packit(
         [
             "--debug",
@@ -257,6 +273,7 @@ def test_update_catch(tmp_path: Path):
             f"{source_git_path}:{sg_branch}",
         ]
     )
+    assert_repo_is_not_dirty(source_git_path)
     run_packit(
         [
             "--debug",
