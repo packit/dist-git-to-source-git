@@ -203,7 +203,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
     "package",
     (
         "apr",
-        "meson",
+        # "meson",  # FIXME: needs packit 0.20
         "ostree",
         "pacemaker",
         "vala",
@@ -247,6 +247,7 @@ def test_update_existing(tmp_path: Path, package):
     assert srpm_path.exists()
 
 
+@pytest.mark.skip(msg="We need packit 0.20")
 def test_update_catch(tmp_path: Path):
     """
     make sure we can update package catch and
