@@ -66,49 +66,55 @@ class Processor:
             return
 
         Pushgateway().push_received_message(ignored=False)
-        set_logging_to_file(repo_name=name, commit_sha=event["end_commit"])
-
-        # Clone repo from rpms/ and checkout the branch.
-        dist_git_dir = workdir / fullname
-        shutil.rmtree(dist_git_dir, ignore_errors=True)
-        dist_git_repo = git.Repo.clone_from(
-            f"https://{dist_git_host}/{fullname}.git", dist_git_dir
+        file_handler = set_logging_to_file(
+            repo_name=name, commit_sha=event["end_commit"]
         )
-        dist_git_repo.git.checkout(branch)
 
-        # Check if the commit is the one we are expecting.
-        if dist_git_repo.branches[branch].commit.hexsha != event["end_commit"]:
-            logger.warning(
-                f"HEAD of {branch} is not matching {event['end_commit']}, as expected."
+        try:
+            # Clone repo from rpms/ and checkout the branch.
+            dist_git_dir = workdir / fullname
+            shutil.rmtree(dist_git_dir, ignore_errors=True)
+            dist_git_repo = git.Repo.clone_from(
+                f"https://{dist_git_host}/{fullname}.git", dist_git_dir
+            )
+            dist_git_repo.git.checkout(branch)
+
+            # Check if the commit is the one we are expecting.
+            if dist_git_repo.branches[branch].commit.hexsha != event["end_commit"]:
+                logger.warning(
+                    f"HEAD of {branch} is not matching {event['end_commit']}, as expected."
+                )
+
+            # Clone repo from source-git/ using ssh, so it can be pushed later on.
+            src_git_ssh_url = project.get_git_urls()["ssh"]
+            src_git_dir = workdir / src_git_namespace / name
+            shutil.rmtree(src_git_dir, ignore_errors=True)
+            src_git_repo = git.Repo.clone_from(
+                src_git_ssh_url,
+                src_git_dir,
             )
 
-        # Clone repo from source-git/ using ssh, so it can be pushed later on.
-        src_git_ssh_url = project.get_git_urls()["ssh"]
-        src_git_dir = workdir / src_git_namespace / name
-        shutil.rmtree(src_git_dir, ignore_errors=True)
-        src_git_repo = git.Repo.clone_from(
-            src_git_ssh_url,
-            src_git_dir,
-        )
+            # Check-out the source-git branch, if already exists,
+            # so that 'convert' knows that this is an update.
+            remote_heads = [
+                ref.remote_head
+                for ref in src_git_repo.references
+                if isinstance(ref, git.RemoteReference)
+            ]
+            if branch in remote_heads:
+                src_git_repo.git.checkout(branch)
 
-        # Check-out the source-git branch, if already exists,
-        # so that 'convert' knows that this is an update.
-        remote_heads = [
-            ref.remote_head
-            for ref in src_git_repo.references
-            if isinstance(ref, git.RemoteReference)
-        ]
-        if branch in remote_heads:
-            src_git_repo.git.checkout(branch)
+            d2s = Dist2Src(
+                dist_git_path=dist_git_dir,
+                source_git_path=src_git_dir,
+            )
+            d2s.convert(branch, branch)
 
-        d2s = Dist2Src(
-            dist_git_path=dist_git_dir,
-            source_git_path=src_git_dir,
-        )
-        d2s.convert(branch, branch)
+            # Push the result to source-git.
 
-        # Push the result to source-git.
+            # Update moves sg-start tag, we need --tags --force to move it in remote.
+            src_git_repo.git.push("origin", branch, tags=True, force=True)
+            Pushgateway().push_created_update()
 
-        # Update moves sg-start tag, we need --tags --force to move it in remote.
-        src_git_repo.git.push("origin", branch, tags=True, force=True)
-        Pushgateway().push_created_update()
+        finally:
+            getLogger("dist2src").removeHandler(file_handler)
