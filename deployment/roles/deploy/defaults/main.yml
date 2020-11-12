@@ -14,7 +14,7 @@ validate_certs: yes
 # Set to 'true' when deploying to local cluster
 push_dev_images: false
 
-image_worker: docker.io/usercont/dist2src-worker
+image_worker: docker.io/usercont/dist2src
 
 image_centosmsg: docker.io/usercont/packit-service-centosmsg:prod
 

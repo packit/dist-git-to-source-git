@@ -8,28 +8,11 @@
     - name: Install all RPMs needed to install & run dist2src worker
       dnf:
         name:
-          - python3-pip
-          - python3-click
-          - python3-GitPython
-          - python3-sh
-          - python3-timeout-decorator
-          - python3-celery
-          - python3-redis
-          - python3-lazy-object-proxy
-          - redis # redis-cli for debugging
-          - python3-cccolutils # packitos dependency, otherwise we'd need gcc to compile it
-          - gcc
-          - git
-          - krb5-devel
-          - python3-devel
-          - python3-pip
-          - rpm-build
+          - python3-prometheus_client
     - name: Install pip deps
       pip:
         name:
           - sentry-sdk==0.19.1
-          - rebasehelper==0.23.1
-          - prometheus_client
         executable: pip3
     - name: Check if all pip packages have all dependencies installed
       command: pip3 check
