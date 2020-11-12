@@ -66,6 +66,26 @@ class GitRepo:
             ref = self.repo.active_branch
         return f"GitRepo(path={self.repo_path}, ref={ref})"
 
+    def has_ref(self, ref: str):
+        """
+        does this repo have a ref?
+
+        @param ref: the ref to check via repo.branches and remote[].refs
+        @return: bool
+        """
+        if ref in self.repo.branches:
+            return True
+        # .branches does not contain all remote refs = branches
+        # (Pdb) self.source_git.repo.branches
+        # [<git.Head "refs/heads/master">]
+        # (Pdb) self.source_git.repo.remotes["origin"].refs
+        # [<git.RemoteReference "refs/remotes/origin/HEAD">,
+        #  <git.RemoteReference "refs/remotes/origin/c8">,
+        #  <git.RemoteReference "refs/remotes/origin/master">]
+        if "origin" in self.repo.remotes:
+            return ref in self.repo.remotes["origin"].refs
+        return False
+
     def checkout(self, branch: str, orphan: bool = False, create_branch: bool = False):
         """
         Run `git checkout` in the git repo.
@@ -221,6 +241,16 @@ class Dist2Src:
         return self._dist_git_spec
 
     @property
+    def BUILD_repo_path(self) -> Path:
+        """
+        return path to the git repo generated after running rpmbuild -bp
+        it resides in dist-git/BUILD/NAME-VERSION/
+        """
+        # Make it absolute, so that it's easier to use it with 'fetch'
+        # running from dest_dir
+        return get_build_dir(self.dist_git_path).absolute()
+
+    @property
     def package_name(self):
         if self.dist_git_path:
             return self.dist_git_path.name
@@ -370,20 +400,17 @@ class Dist2Src:
         logger.info(
             f"Fetch the dist-git %prep branch to source-git branch {dest_branch}."
         )
-        # Make it absolute, so that it's easier to use it with 'fetch'
-        # running from dest_dir
-        dist_git_BUILD_path = get_build_dir(self.dist_git_path).absolute()
-
-        self.source_git.fetch(dist_git_BUILD_path, f"+{source_branch}:{dest_branch}")
+        self.source_git.fetch(self.BUILD_repo_path, f"+{source_branch}:{dest_branch}")
 
     def perform_convert(self, origin_branch: str, dest_branch: str):
         """ Run all the steps to get a source-git repo from dist-git """
         self.dist_git.checkout(branch=origin_branch)
         if self.source_git.repo.active_branch.name != dest_branch:
-            update = False
-            if dest_branch in [branch.name for branch in self.source_git.repo.branches]:
+            if self.source_git.has_ref(dest_branch):
+                update = True
                 self.source_git.checkout(branch=dest_branch)
             else:
+                update = False
                 self.source_git.checkout(branch=dest_branch, orphan=True)
         else:
             update = True
@@ -391,11 +418,13 @@ class Dist2Src:
         # expand dist-git and pull the history
         self.fetch_archive()
         self.run_prep()
-        if not (get_build_dir(self.dist_git_path).absolute() / ".git").is_dir():
+        if not (self.BUILD_repo_path / ".git").is_dir():
             raise RuntimeError(
                 ".git repo not present in the BUILD/ dir after running %prep"
             )
-        self.dist_git.commit_all(message="Changes after running %prep")
+        BUILD_repo = GitRepo(self.BUILD_repo_path)
+        # since this is not a patch, we want packit to ignore it
+        BUILD_repo.commit_all(message="Changes after running %prep\n\nignore: true")
         self.fetch_branch(source_branch="master", dest_branch=TEMP_SG_BRANCH)
         self.source_git.cherry_pick_base(
             from_branch=TEMP_SG_BRANCH, to_branch=dest_branch, theirs=update
@@ -427,10 +456,7 @@ class Dist2Src:
         """
         if self.package_name in VERY_VERY_HARD_PACKAGES:
             self.convert_single_commit(origin_branch, dest_branch)
-        elif (
-            self.source_git_path.exists()
-            and dest_branch in self.source_git.repo.branches
-        ):
+        elif self.source_git_path.exists() and self.source_git.has_ref(dest_branch):
             logger.info(
                 "The source-git repository and branch exist. Updating existing source-git..."
             )
@@ -444,9 +470,7 @@ class Dist2Src:
         git repo created in BUILD/<PACKAGE-VERSION> since it's wrong
         hence we only copy the content to the source-git repo and commit it
         """
-        dist_git_BUILD_path = get_build_dir(self.dist_git_path).absolute()
-
-        for entry in dist_git_BUILD_path.iterdir():
+        for entry in self.BUILD_repo_path.iterdir():
             if entry.is_file():
                 logger.debug(f"copy {entry} -> {self.source_git_path}")
                 shutil.copy2(entry, self.source_git_path)
@@ -567,8 +591,7 @@ class Dist2Src:
         """
         patch_files_in_commits: Set[str] = set()
 
-        BUILD_git_path = get_build_dir(self.dist_git_path).absolute()
-        BUILD_git = git.Repo(BUILD_git_path)
+        BUILD_git = git.Repo(self.BUILD_repo_path)
         for commit in BUILD_git.iter_commits():
             p = PatchMetadata.from_commit(commit, None)
             if p.present_in_specfile:  # base commit doesn't have any metadata
@@ -607,16 +630,6 @@ class Dist2Src:
         FROM_BRANCH is cleaned up (deleted).
         """
         logger.info(f"Rebase patches from {from_branch} onto {to_branch}.")
-        self.source_git.checkout(from_branch)
-
-        # FIXME: don't call out to source_git.repo directly
-        if self.source_git.repo.head.commit.message == "Changes after running %prep\n":
-            logger.info("Moving the commit with %prep artifacts behind patches.")
-            self.source_git.checkout(to_branch)
-            self.source_git.repo.git.cherry_pick(from_branch)
-            self.source_git.create_tag(tag=START_TAG, branch=to_branch)
-            self.source_git.checkout(from_branch)
-            self.source_git.repo.git.reset("--hard", "HEAD^")
 
         self.source_git.checkout(to_branch)
         commits_to_cherry_pick = [
