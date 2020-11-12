@@ -11,7 +11,7 @@ def set_logging_to_file(
     :param repo_name: name of the repository
     :param commit_sha: commit SHA
     :param logs_dir: dir where the logs are stored
-    :return:
+    :return: file handler
     """
     logger = logging.getLogger("dist2src")
     logger.setLevel(logging.DEBUG)
@@ -28,3 +28,4 @@ def set_logging_to_file(
 
     logger.addHandler(file_handler)
     logger.info(f"Processing repository {repo_name}, commit SHA {commit_sha}.")
+    return file_handler
