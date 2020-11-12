@@ -17,6 +17,11 @@ else
   LOGLEVEL="DEBUG"
 fi
 
+DEFAULT_HOST="git.centos.org"
+D2S_DIST_GIT_HOST="${D2S_DIST_GIT_HOST:-$DEFAULT_HOST}"
+DEFAULT_HOST="git.stg.centos.org"
+D2S_SRC_GIT_HOST="${D2S_SRC_GIT_HOST:-$DEFAULT_HOST}"
+
 mkdir --mode=0700 -p "${HOME}/.ssh"
 pushd "${HOME}/.ssh"
 install -m 0600 /d2s-ssh/id_rsa .
