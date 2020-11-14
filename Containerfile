@@ -50,7 +50,8 @@ RUN $package_manager install \
     dos2unix \
     perl-devel \
     rubygems \
-    xmlto
+    xmlto \
+    python3-devel
 # PowerTools repo installed for gtk-doc
 RUN $package_manager install dnf-plugins-core \
     && $package_manager config-manager --set-enabled PowerTools \
