@@ -35,7 +35,11 @@ def test_event_not_for_dist_git_namespace(caplog):
 
     with caplog.at_level(logging.INFO):
         Processor().process_message(
-            {"repo": {"fullname": "tests/acl", "name": "acl"}, "branch": "c8s"}
+            {
+                "repo": {"fullname": "tests/acl", "name": "acl"},
+                "branch": "c8s",
+                "end_commit": "0a0c838",
+            }
         )
         assert "Ignore update event for tests/acl" in caplog.text
 
@@ -52,7 +56,11 @@ def test_event_not_for_branch(caplog):
 
     with caplog.at_level(logging.INFO):
         Processor().process_message(
-            {"repo": {"fullname": "rpms/acl", "name": "acl"}, "branch": "work"}
+            {
+                "repo": {"fullname": "rpms/acl", "name": "acl"},
+                "branch": "work",
+                "end_commit": "0a0c838",
+            }
         )
         assert "Ignore update event for rpms/acl" in caplog.text
         assert "Branch 'work' is not one of the watched branches" in caplog.text
@@ -79,7 +87,11 @@ def test_no_corresponding_source_git(caplog):
 
     with caplog.at_level(logging.INFO):
         Processor().process_message(
-            {"repo": {"fullname": "rpms/acl", "name": "acl"}, "branch": "c8s"}
+            {
+                "repo": {"fullname": "rpms/acl", "name": "acl"},
+                "branch": "c8s",
+                "end_commit": "0a0c838",
+            }
         )
         assert "Ignore update event for rpms/acl" in caplog.text
 
