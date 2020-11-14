@@ -6,7 +6,7 @@
 PACKAGE ?= rpm
 BRANCH ?= c8s
 DIR ?= git.centos.org
-IMAGE_NAME := docker.io/usercont/dist2src
+IMAGE_NAME := docker.io/usercont/dist2src:dev
 CONTAINER_ENGINE ?= $(shell command -v podman 2> /dev/null || echo docker)
 CONTAINER_CMD ?= /bin/bash
 TEST_TARGET ?= ./tests

@@ -28,8 +28,7 @@
           api_key: {{ kubeconfig_token.stdout }}
           validate_certs: no
           push_dev_images: true
-          # In dev/testing environment we want to use our locally built image
-          # and don't update it from registry
+          # Don't try to import from registry
           auto_import_images: false
         dest: "{{ project_dir }}/deployment/roles/deploy/vars/dev.yml"
 

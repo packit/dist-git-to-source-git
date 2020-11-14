@@ -1,4 +1,6 @@
 ---
+deployment: "{{ lookup('env', 'DEPLOYMENT') }}"
+
 # Openshift project/namespace name
 project: dist2src-update
 
@@ -14,7 +16,7 @@ validate_certs: yes
 # Set to 'true' when deploying to local cluster
 push_dev_images: false
 
-image_worker: docker.io/usercont/dist2src
+image_worker: docker.io/usercont/dist2src:{{ deployment }}
 
 image_centosmsg: docker.io/usercont/packit-service-centosmsg:prod
 
@@ -25,7 +27,6 @@ worker_replicas: 1
 celery_task_name: task.dist2src.process_message
 
 container_engine: "{{ lookup('pipe', 'command -v podman 2> /dev/null || echo docker') }}"
-deployment: "{{ lookup('env', 'DEPLOYMENT') }}"
 
 # Whether to periodically import image(s) from registry to image stream(s)
 auto_import_images: true
