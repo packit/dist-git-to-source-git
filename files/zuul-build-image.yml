@@ -2,13 +2,13 @@
 # SPDX-License-Identifier: MIT
 
 ---
-- name: Build worker image
+- name: Build dist2src image
   hosts: all
   vars:
     project_dir: "{{ playbook_dir }}/.."
   tasks:
-    - name: Build worker image
-      command: make worker
+    - name: Build dist2src image
+      command: make build
       args:
         chdir: "{{ project_dir }}"
       become: true

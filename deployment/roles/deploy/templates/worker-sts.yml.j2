@@ -42,7 +42,7 @@ spec:
             secretName: d2s-ssh
       containers:
         - name: worker
-          image: worker:latest
+          image: worker:{{ deployment }}
           env:
             - name: APP
               value: dist2src.worker.tasks

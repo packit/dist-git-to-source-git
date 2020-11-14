@@ -4,14 +4,6 @@
   vars:
     home_path: "{{ lookup('env', 'HOME') }}"
   tasks:
-    - name: Install dist2src
-      pip:
-        name: /src
-        executable: pip3
-    - name: Clean all the cache files (especially pip)
-      file:
-        state: absent
-        path: ~/.cache/
     - name: Copy run_worker.sh
       copy:
         src: run_worker.sh
