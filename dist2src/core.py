@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import List, Optional, Union, Set
 
@@ -25,6 +26,7 @@ from dist2src.constants import (
     HOOKS,
     VERY_VERY_HARD_PACKAGES,
 )
+from dist2src.not_utils import clone_fedora_package
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +62,15 @@ class GitRepo:
         else:
             self.repo = git.Repo(repo_path)
 
+    @classmethod
+    def clone(cls, path_or_url: str):
+        if Path(path_or_url).exists():
+            return cls(repo_path=Path(path_or_url))
+        else:
+            d = tempfile.mkdtemp(prefix="d2s")
+            git.Repo.clone_from(path_or_url, d)
+            return cls(repo_path=Path(d))
+
     def __str__(self):
         ref = None
         if self.repo:
@@ -86,11 +97,18 @@ class GitRepo:
             return ref in self.repo.remotes["origin"].refs
         return False
 
-    def checkout(self, branch: str, orphan: bool = False, create_branch: bool = False):
+    def checkout(
+        self,
+        branch: str,
+        source_ref: str = "HEAD",
+        orphan: bool = False,
+        create_branch: bool = False,
+    ):
         """
         Run `git checkout` in the git repo.
 
         @param branch: name of the branch to check out
+        @param source_ref, when creating a new branch use this one as a source
         @param orphan: Create a branch with disconnected history.
         @param create_branch: Create branch if it doesn't exist (using -B)
         """
@@ -103,7 +121,7 @@ class GitRepo:
                     # entry = (path, stage number) -- see BaseIndexEntry.stage
                     self.repo.index.remove(entry[0], working_tree=True, r=True, f=True)
         elif create_branch:
-            self.repo.git.checkout("-B", branch)
+            self.repo.git.checkout("-B", branch, source_ref)
         else:
             self.repo.git.checkout(branch, force=True)
 
@@ -677,3 +695,51 @@ class Dist2Src:
 
         # fast-forward old branch
         self.source_git.fast_forward(branch=dest_branch, to_ref=new_dest_branch)
+
+    def create_from_upstream(
+        self, repository, upstream_ref, fedora_package_name, fedora_branch
+    ):
+        # TODO: move this to a dedicated class so we can override CentOS' defaults
+        tmpdir = tempfile.mkdtemp(prefix="d2s")
+        upstream_git_repo = GitRepo.clone(repository)
+        fedora_package_name = fedora_package_name or upstream_git_repo.repo_path.name
+        fedora_branch = fedora_branch or "master"
+        self.dist_git_path = Path(tmpdir).joinpath(fedora_package_name)
+
+        # we don't need this so far
+        # self.source_git.repo.create_remote("upstream", upstream_git_repo.repo_path)
+
+        # FIXME: instead do this with a remote and fetch everything
+        self.source_git.fetch(
+            upstream_git_repo.repo_path,
+            f"refs/tags/{upstream_ref}:refs/tags/{upstream_ref}",
+        )
+        self.source_git.checkout(
+            "master", source_ref=upstream_ref, orphan=False, create_branch=True
+        )
+
+        clone_fedora_package(
+            fedora_package_name, self.dist_git_path, branch=fedora_branch
+        )
+        self.dist_git = GitRepo(self.dist_git_path)
+
+        sg_fedora_dir = self.source_git_path.joinpath("fedora")
+        os.makedirs(sg_fedora_dir)
+        specfile_path = self.dist_git_path.joinpath(f"{fedora_package_name}.spec")
+        shutil.copy2(specfile_path, sg_fedora_dir)
+        # TODO: copy all sources
+        self.source_git.commit_all("add Fedora spec file")
+
+        packit_yaml_path = self.source_git_path.joinpath(".packit.yaml")
+        packit_yaml_path.write_text(
+            f"""
+        ---
+        specfile_path: "{specfile_path}"
+        upstream_ref: "{upstream_ref}"
+        """
+        )
+        self.source_git.commit_all("add packit.yaml")
+
+        # TODO: self.run_prep
+        # TODO: rebase patches on top of the source-git repo
+        # and hope it works :>

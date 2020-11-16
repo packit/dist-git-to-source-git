@@ -14,8 +14,8 @@ from tests.conftest import (
     TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT,
     run_dist2src,
     run_packit,
-    clone_package,
 )
+from dist2src.not_utils import clone_package
 
 
 def assert_repo_is_not_dirty(repo_path: Union[str, Path]):

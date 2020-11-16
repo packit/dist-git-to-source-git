@@ -216,5 +216,40 @@ def convert(ctx, origin: str, dest: str):
     d2s.convert(origin_branch, dest_branch)
 
 
+@cli.command("create-from-upstream")
+@click.argument("repository", type=click.STRING)
+@click.argument("dest", type=click.STRING)
+@click.argument("upstream_ref", type=click.STRING)  # TODO: discover latest
+@click.option("--fedora-package-name", type=click.STRING)
+@click.option("--fedora-branch", type=click.STRING, default="master")
+@log_call
+@click.pass_context
+def create_from_upstream(
+    ctx,
+    repository: str,
+    dest: str,
+    upstream_ref: str,
+    fedora_package_name: str,
+    fedora_branch: str,
+):
+    """
+    Create a true source-git repo from upstream.
+
+    repository: URL of the upstream repository
+    dest: local path for the source-git
+    upstream_ref:
+
+    This interface is expected to be discussed.
+    """
+    d2s = Dist2Src(
+        dist_git_path=None,
+        source_git_path=Path(dest),
+        log_level=ctx.obj[VERBOSE_KEY],
+    )
+    d2s.create_from_upstream(
+        repository, upstream_ref, fedora_package_name, fedora_branch
+    )
+
+
 if __name__ == "__main__":
     cli()

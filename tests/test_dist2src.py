@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 
 from dist2src.core import Dist2Src
-from tests.conftest import clone_package, run_dist2src
+from tests.conftest import run_dist2src
+from dist2src.not_utils import clone_package
 
 this_dir = Path(__file__).parent
 data_dir = this_dir / "data"
