@@ -24,12 +24,10 @@ TEST_PROJECTS_WITH_BRANCHES = [
     #    "c8s-stream-rhel",
     # ),  # %autosetup -S git_am -N + weirdness + %autopatch
     ("libreport", "c8s"),  # -S git, they redefine "__scm_apply_git"
-    # FIXME: We need packit 0.20 or packit/packit#1000
-    # ("podman", "c8s-stream-rhel8"),  # %autosetup -Sgit, tar fx %SOURCE1
+    ("podman", "c8s-stream-rhel8"),  # %autosetup -Sgit, tar fx %SOURCE1
     # alsa-lib has an empty patch file, we need support in packit for that
     # https://bugzilla.redhat.com/show_bug.cgi?id=1875768
-    # https://github.com/packit/packit/issues/957
-    # ("alsa-lib", "c8s"),
+    ("alsa-lib", "c8s"),
     # no %prep lol, https://github.com/packit/dist-git-to-source-git/issues/46
     # ("appstream-data", "c8s"),
     # ("atlas", "c8s")  # insanity + requires lapack-devel to be present while converting

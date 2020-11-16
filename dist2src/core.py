@@ -155,7 +155,11 @@ class GitRepo:
         num_commits = sum(1 for _ in self.repo.iter_commits(from_branch))
         self.checkout(to_branch, create_branch=True)
         git_options = (
-            {"strategy_option": "theirs", "keep_redundant_commits": True}
+            {
+                "strategy": "recursive",
+                "strategy_option": "theirs",
+                "keep_redundant_commits": True,
+            }
             if theirs
             else {}
         )
@@ -169,6 +173,19 @@ class GitRepo:
         except GitCommandError as ex:
             if "nothing to commit" in str(ex):
                 self.commit(message="Base commit: empty - no source archive")
+            elif "could not apply" in str(ex):
+                # even though we are doing -Xtheirs, git still can fail resolving conflicts
+                # which is really weird; in such a case, let's just `add .` and continue
+                # the cherry-pick process
+                self.repo.git.checkout("--theirs", ".")
+                self.stage(".")
+                # cherry-pick prompts an editor here
+                self.repo.git.cherry_pick("--continue")
+                if self.repo.is_dirty():
+                    raise RuntimeError(
+                        "We wanted to cherry-pick the base commit but the source-git repo "
+                        "is dirty when it shouldn't be."
+                    )
             else:
                 raise
 
