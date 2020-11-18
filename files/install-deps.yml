@@ -1,0 +1,66 @@
+---
+- name: Install dependencies for dist2src.
+  hosts: all
+  tasks:
+    - name: Install as many (setup.cfg) deps from RPM as possible
+      dnf:
+        name:
+          - rpm-build
+          - python3-GitPython
+          - python3-celery
+          - python3-redis
+          - python3-lazy-object-proxy
+          - python3-timeout-decorator
+        state: latest
+    - name: Install ogr & packitos deps as RPMs
+      dnf:
+        name:
+          - python3-bodhi-client
+          - python3-cccolutils
+          - python3-copr
+          - python3-gitlab
+          - python3-gnupg
+          - python3-jwt
+          - python3-marshmallow-enum
+          - python3-pam
+          - python3-sh
+          - python3-tabulate
+          - python3-wrapt
+        state: latest
+    - name: Install tools required by %prep section of some packages
+      dnf:
+        name:
+          - bison
+          - flex
+          - make
+          - autoconf
+          - automake
+          - gettext-devel
+          - sscg
+          - libtool
+          - dos2unix
+          - perl-devel
+          - rubygems
+          # httpd
+          - xmlto
+          # kernel needs pathfix.py
+          - python3-devel
+        state: latest
+    - name: Install gtk-doc
+      shell: dnf --enablerepo=PowerTools --setopt=PowerTools.module_hotfixes=true install -y javapackages-local gtk-doc
+      args:
+        warn: no
+    - name: Install python3-ipython to speed up ipdb install
+      dnf:
+        name:
+          - python3-ipython
+        state: latest
+    - name: Pip install tools for debugging, tests
+      pip:
+        name:
+          - ipdb
+          - pytest
+          - flexmock
+        executable: pip3
+    - name: Check if all pip packages have all dependencies installed
+      command: pip3 check
