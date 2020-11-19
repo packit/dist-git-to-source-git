@@ -38,7 +38,7 @@ services:
     build:
       context: ..
       dockerfile: Containerfile
-    image: docker.io/usercont/dist2src
+    image: quay.io/packit/dist2src:dev
     command: /usr/bin/run_worker.sh
     depends_on:
       - redis
