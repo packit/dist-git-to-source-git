@@ -33,12 +33,16 @@ class Processor:
         self.name: Optional[str] = None
         self.branch: Optional[str] = None
         self.end_commit: Optional[str] = None
+        self.dist_git_dir: Optional[Path] = None
+        self.src_git_dir: Optional[Path] = None
 
     def process_message(self, event: dict, **kwargs):
         self.fullname = event["repo"]["fullname"]
         self.name = event["repo"]["name"]
         self.branch = event["branch"]
         self.end_commit = event["end_commit"]
+        self.dist_git_dir = self.workdir / self.dist_git_namespace / self.name
+        self.src_git_dir = self.workdir / self.src_git_namespace / self.name
 
         logger.info(f"Processing message with {event}")
         # Is this a repository in the rpms namespace?
@@ -60,7 +64,7 @@ class Processor:
             Pushgateway().push_received_message(ignored=True)
             return
 
-        # Does this repository have a source-git equvalent?
+        # Does this repository have a source-git equivalent?
         service = PagureService(
             instance_url=f"https://{self.src_git_host}", token=self.src_git_token
         )
@@ -86,13 +90,13 @@ class Processor:
             self.update_project(project)
         finally:
             getLogger("dist2src").removeHandler(file_handler)
+            self.cleanup()
 
     def update_project(self, project: PagureProject):
+        self.cleanup()
         # Clone repo from rpms/ and checkout the branch.
-        dist_git_dir = self.workdir / self.fullname
-        shutil.rmtree(dist_git_dir, ignore_errors=True)
         dist_git_repo = git.Repo.clone_from(
-            f"https://{self.dist_git_host}/{self.fullname}.git", dist_git_dir
+            f"https://{self.dist_git_host}/{self.fullname}.git", self.dist_git_dir
         )
         dist_git_repo.git.checkout(self.branch)
 
@@ -104,11 +108,9 @@ class Processor:
 
         # Clone repo from source-git/ using ssh, so it can be pushed later on.
         src_git_ssh_url = project.get_git_urls()["ssh"]
-        src_git_dir = self.workdir / self.src_git_namespace / self.name
-        shutil.rmtree(src_git_dir, ignore_errors=True)
         src_git_repo = git.Repo.clone_from(
             src_git_ssh_url,
-            src_git_dir,
+            self.src_git_dir,
         )
 
         # Check-out the source-git branch, if already exists,
@@ -122,8 +124,8 @@ class Processor:
             src_git_repo.git.checkout(self.branch)
 
         d2s = Dist2Src(
-            dist_git_path=dist_git_dir,
-            source_git_path=src_git_dir,
+            dist_git_path=self.dist_git_dir,
+            source_git_path=self.src_git_dir,
         )
         d2s.convert(self.branch, self.branch)
 
@@ -131,3 +133,9 @@ class Processor:
         # Update moves sg-start tag, we need --tags --force to move it in remote.
         src_git_repo.git.push("origin", self.branch, tags=True, force=True)
         Pushgateway().push_created_update()
+
+    def cleanup(self):
+        if self.dist_git_dir:
+            shutil.rmtree(self.dist_git_dir, ignore_errors=True)
+        if self.src_git_dir:
+            shutil.rmtree(self.src_git_dir, ignore_errors=True)
