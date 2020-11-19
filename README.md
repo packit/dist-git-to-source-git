@@ -1,3 +1,8 @@
+[![Build Status](https://zuul-ci.org/gated.svg)](https://softwarefactory-project.io/zuul/t/local/builds?project=packit-service/dist2src)
+[![black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![Docker Repository on Quay](https://quay.io/repository/packit/dist2src/status "Docker Repository on Quay")](https://quay.io/repository/packit/dist2src)
+
 # Converting dist-git to source-git
 
 This should be similar to [How to source-git?], except that it isn't :)
