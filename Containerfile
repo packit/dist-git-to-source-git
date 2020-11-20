@@ -1,7 +1,7 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
 
-ARG base_image=centos:8
+ARG base_image=quay.io/app-sre/centos:8
 ARG package_manager
 FROM $base_image
 
