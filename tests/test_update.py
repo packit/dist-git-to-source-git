@@ -203,7 +203,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
     "package",
     (
         "apr",
-        # "meson",  # FIXME: needs packit 0.20
+        "meson",
         "ostree",
         "pacemaker",
         "vala",
