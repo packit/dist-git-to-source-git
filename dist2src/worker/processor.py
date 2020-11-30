@@ -14,7 +14,7 @@ from ogr.services.pagure import PagureProject
 from ogr import PagureService
 from dist2src.core import Dist2Src
 from dist2src.worker.monitoring import Pushgateway
-from dist2src.worker.logging import set_logging_to_file
+from dist2src.worker import logging as worker_logging
 
 logger = getLogger(__name__)
 
@@ -25,6 +25,7 @@ class Processor:
         self.dist_git_host = os.getenv("D2S_DIST_GIT_HOST", "git.centos.org")
         self.src_git_host = os.getenv("D2S_SRC_GIT_HOST", "git.stg.centos.org")
         self.src_git_token = os.getenv("D2S_SRC_GIT_TOKEN")
+        self.dist_git_token = os.getenv("D2S_DIST_GIT_TOKEN")
         self.dist_git_namespace = os.getenv("D2S_DIST_GIT_NAMESPACE", "rpms")
         self.src_git_namespace = os.getenv("D2S_SRC_GIT_NAMESPACE", "source-git")
         self.branches_watched = os.getenv("D2S_BRANCHES_WATCHED", "c8s,c8").split(",")
@@ -65,15 +66,17 @@ class Processor:
             return
 
         # Does this repository have a source-git equivalent?
-        service = PagureService(
+        src_git_service = PagureService(
             instance_url=f"https://{self.src_git_host}", token=self.src_git_token
         )
         # When the namespace is a fork, "fork" is singular when accessing
         # the API, but plural in the Git URLs.
         # Keep this here, so we can test with forks.
-        namespace = re.sub(r"^forks\/", "fork/", self.src_git_namespace)
-        project = service.get_project(namespace=namespace, repo=self.name)
-        if not project.exists():
+        src_git_namespace = re.sub(r"^forks\/", "fork/", self.src_git_namespace)
+        src_git_project = src_git_service.get_project(
+            namespace=src_git_namespace, repo=self.name
+        )
+        if not src_git_project.exists():
             logger.info(
                 f"Ignore update event for {self.fullname}. "
                 "The corresponding source-git repo does not exist."
@@ -81,18 +84,28 @@ class Processor:
             Pushgateway().push_received_message(ignored=True)
             return
 
+        # check if the repository is up to date
+        conversion_tag = f"convert/{self.branch}/{self.end_commit}"
+        if conversion_tag in src_git_project.get_tags():
+            logger.info(
+                f"Ignore update event for {self.fullname}. "
+                "The source-git repo is already up to date."
+            )
+            Pushgateway().push_received_message(ignored=True)
+            return
+
         Pushgateway().push_received_message(ignored=False)
-        file_handler = set_logging_to_file(
+        file_handler = worker_logging.set_logging_to_file(
             repo_name=self.name, commit_sha=self.end_commit
         )
 
         try:
-            self.update_project(project)
+            self.update_project(src_git_project, conversion_tag)
         finally:
             getLogger("dist2src").removeHandler(file_handler)
             self.cleanup()
 
-    def update_project(self, project: PagureProject):
+    def update_project(self, project: PagureProject, conversion_tag: str):
         self.cleanup()
         # Clone repo from rpms/ and checkout the branch.
         dist_git_repo = git.Repo.clone_from(
@@ -128,6 +141,14 @@ class Processor:
             source_git_path=self.src_git_dir,
         )
         d2s.convert(self.branch, self.branch)
+
+        src_git_repo.git.tag(
+            "--annotate",
+            "--message",
+            f"Converted from commit {self.end_commit},\nfrom branch {self.branch}.",
+            conversion_tag,
+            src_git_repo.heads[self.branch].commit,
+        )
 
         # Push the result to source-git.
         # Update moves sg-start tag, we need --tags --force to move it in remote.

@@ -9,7 +9,7 @@ metadata:
   name: worker
 spec:
   tags:
-    - name: {{ deployment }}
+    - name: latest
       from:
         kind: DockerImage
         name: {{ image_worker }}
