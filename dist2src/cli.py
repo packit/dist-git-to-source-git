@@ -10,6 +10,7 @@ from pathlib import Path
 import click
 
 from dist2src.core import Dist2Src
+from dist2src.constants import START_TAG_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
@@ -169,16 +170,17 @@ def copy_all_sources(ctx, origin: str, dest: str):
 
 @cli.command()
 @click.argument("dest", type=click.Path(exists=True, file_okay=False))
+@click.argument("branch", type=click.STRING)
 @log_call
 @click.pass_context
-def add_packit_config(ctx, dest: str):
+def add_packit_config(ctx, dest: str, branch: str):
     """
     Add packit config to the source-git repo and commit it.
     """
     d2s = Dist2Src(
         dist_git_path=None, source_git_path=Path(dest), log_level=ctx.obj[VERBOSE_KEY]
     )
-    d2s.add_packit_config()
+    d2s.add_packit_config(upstream_ref=START_TAG_TEMPLATE.format(branch=branch))
 
 
 @cli.command("convert")

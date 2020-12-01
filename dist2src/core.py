@@ -15,12 +15,13 @@ import sh
 from git import GitCommandError
 from packit.patches import PatchMetadata
 from packit.specfile import Specfile
+from packit.config import get_local_package_config
 from yaml import dump
 
 from dist2src.constants import (
     AFTER_PREP_HOOK,
     TEMP_SG_BRANCH,
-    START_TAG,
+    START_TAG_TEMPLATE,
     TARGETS,
     HOOKS,
     VERY_VERY_HARD_PACKAGES,
@@ -215,6 +216,14 @@ class GitRepo:
     def fast_forward(self, branch, to_ref):
         self.checkout(branch)
         self.repo.git.merge(to_ref, ff_only=True)
+
+    @property
+    def packit_upstream_ref(self):
+        """
+        Get the 'upstream_ref' value from Packit configuration.
+        """
+        package_config = get_local_package_config(self.repo.working_dir)
+        return package_config.upstream_ref
 
 
 class Dist2Src:
@@ -419,7 +428,9 @@ class Dist2Src:
         )
         self.source_git.fetch(self.BUILD_repo_path, f"+{source_branch}:{dest_branch}")
 
-    def perform_convert(self, origin_branch: str, dest_branch: str):
+    def perform_convert(
+        self, origin_branch: str, dest_branch: str, source_git_tag: str
+    ):
         """ Run all the steps to get a source-git repo from dist-git """
         self.dist_git.checkout(branch=origin_branch)
         if self.source_git.repo.active_branch.name != dest_branch:
@@ -448,7 +459,7 @@ class Dist2Src:
         )
 
         # configure packit
-        self.add_packit_config(commit=True)
+        self.add_packit_config(upstream_ref=source_git_tag, commit=True)
         self.copy_spec()
         self.source_git.stage(add="SPECS")
         self.source_git.commit(message="Add spec-file for the distribution")
@@ -459,7 +470,7 @@ class Dist2Src:
         self.source_git.commit(message="Add sources defined in the spec file")
 
         # mark the last upstream commit
-        self.source_git.create_tag(tag=START_TAG, branch=dest_branch)
+        self.source_git.create_tag(tag=source_git_tag, branch=dest_branch)
 
         # get all the patch-commits
         self.rebase_patches(from_branch=TEMP_SG_BRANCH, to_branch=dest_branch)
@@ -479,7 +490,11 @@ class Dist2Src:
             )
             self.update_source_git(origin_branch, dest_branch)
         else:
-            self.perform_convert(origin_branch, dest_branch)
+            self.perform_convert(
+                origin_branch,
+                dest_branch,
+                START_TAG_TEMPLATE.format(branch=dest_branch),
+            )
 
     def copy_prep_content(self):
         """
@@ -529,7 +544,8 @@ class Dist2Src:
         self.copy_prep_content()
 
         # configure packit
-        self.add_packit_config(commit=False)
+        source_git_tag = START_TAG_TEMPLATE.format(branch=dest_branch)
+        self.add_packit_config(upstream_ref=source_git_tag, commit=False)
         self.copy_spec()
         self.copy_all_sources(with_patches=True)
         self.source_git.stage(add=".")
@@ -548,9 +564,9 @@ class Dist2Src:
         self.source_git.commit(message=f"Source-git repo for {commit_msg_suffix}")
 
         # mark the last upstream commit
-        self.source_git.create_tag(tag=START_TAG, branch=dest_branch)
+        self.source_git.create_tag(tag=source_git_tag, branch=dest_branch)
 
-    def add_packit_config(self, commit: bool = False):
+    def add_packit_config(self, upstream_ref: str, commit: bool = False):
         """
         Add packit config to the source-git repo.
         """
@@ -559,7 +575,7 @@ class Dist2Src:
             # e.g. qemu-kvm ships "some" spec file in their tarball
             # packit doesn't need to look for the spec when we know where it is
             "specfile_path": self.relative_specfile_path,
-            "upstream_ref": START_TAG,
+            "upstream_ref": upstream_ref,
             "jobs": [
                 {
                     "job": "copr_build",
@@ -685,12 +701,16 @@ class Dist2Src:
         self.source_git.checkout(dest_branch)
         self.source_git.checkout(branch=new_dest_branch, create_branch=True)
         self.source_git.revert_to_ref(
-            START_TAG,
+            self.source_git.packit_upstream_ref,
             commit_message="Prepare for a new update",
             commit_body="Reverting patches so we can apply the latest update\n"
             "and changes can be seen in the spec file and sources.",
         )
-        self.perform_convert(origin_branch=origin_branch, dest_branch=new_dest_branch)
+        self.perform_convert(
+            origin_branch=origin_branch,
+            dest_branch=new_dest_branch,
+            source_git_tag=START_TAG_TEMPLATE.format(branch=dest_branch),
+        )
 
         # fast-forward old branch
         self.source_git.fast_forward(branch=dest_branch, to_ref=new_dest_branch)
