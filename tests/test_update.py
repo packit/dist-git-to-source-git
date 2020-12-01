@@ -24,6 +24,7 @@ def assert_repo_is_not_dirty(repo_path: Union[str, Path]):
     assert not is_dirty
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("package_name,branch", TEST_PROJECTS_WITH_BRANCHES)
 def test_update(tmp_path: Path, package_name, branch):
     """
@@ -78,6 +79,7 @@ def test_update(tmp_path: Path, package_name, branch):
         )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "package_name,branch", TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT
 )
@@ -148,6 +150,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
         )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "package_name,branch,old_version",
     [
@@ -205,6 +208,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
         )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "package",
     (
@@ -253,6 +257,7 @@ def test_update_existing(tmp_path: Path, package):
     assert srpm_path.exists()
 
 
+@pytest.mark.slow
 @pytest.mark.skip(msg="We need packit 0.20")
 def test_update_catch(tmp_path: Path):
     """
