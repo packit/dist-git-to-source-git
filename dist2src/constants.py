@@ -40,7 +40,7 @@ VERY_VERY_HARD_PACKAGES: Iterable[str] = (
 
 # build and test targets
 TARGETS = ["centos-stream-x86_64"]
-START_TAG = "sg-start"
+START_TAG_TEMPLATE = "{branch}-source-git"
 POST_CLONE_HOOK = "post-clone"
 AFTER_PREP_HOOK = "after-prep"
 TEMP_SG_BRANCH = "updates"

@@ -62,6 +62,7 @@ check-in-container:
 		-v $(CURDIR)/packitpatch:/usr/bin/packitpatch:Z \
 		-v $(CURDIR)/macros.packit:/usr/lib/rpm/macros.d/macros.packit:Z \
 		-v $(CURDIR)/tests:/tests:Z \
+		-v $(CURDIR):/src:Z \
 		-u $(shell id -u) \
 		-w / \
 		$(OPTS) \

@@ -7,6 +7,7 @@ from typing import Union
 
 import git
 import pytest
+from dist2src.constants import START_TAG_TEMPLATE
 
 from tests.conftest import (
     MOCK_BUILD,
@@ -23,6 +24,7 @@ def assert_repo_is_not_dirty(repo_path: Union[str, Path]):
     assert not is_dirty
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("package_name,branch", TEST_PROJECTS_WITH_BRANCHES)
 def test_update(tmp_path: Path, package_name, branch):
     """
@@ -77,12 +79,17 @@ def test_update(tmp_path: Path, package_name, branch):
         )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "package_name,branch", TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT
 )
 def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     """
-    run an update twice from the same commit
+    Run an update twice from the same commit.
+
+    This is to check the an initial source-git generation and updating an
+    existing source-git repo produces the same result (the same commits
+    and content).
     """
     dist_git_path = tmp_path / "d" / package_name
     sg_path = tmp_path / "s" / package_name
@@ -98,14 +105,15 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     assert_repo_is_not_dirty(sg_path)
 
     sg_repo = git.Repo(path=sg_path)
-    first_round_commits = list(sg_repo.iter_commits("sg-start..HEAD"))
+    upstream_ref = START_TAG_TEMPLATE.format(branch=branch)
+    first_round_commits = list(sg_repo.iter_commits(f"{upstream_ref}..HEAD"))
 
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
     )
     assert_repo_is_not_dirty(sg_path)
 
-    second_round_commits = list(sg_repo.iter_commits("sg-start..HEAD"))
+    second_round_commits = list(sg_repo.iter_commits(f"{upstream_ref}..HEAD"))
 
     run_packit(
         [
@@ -142,6 +150,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
         )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "package_name,branch,old_version",
     [
@@ -199,6 +208,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
         )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "package",
     (
@@ -247,6 +257,7 @@ def test_update_existing(tmp_path: Path, package):
     assert srpm_path.exists()
 
 
+@pytest.mark.slow
 @pytest.mark.skip(msg="We need packit 0.20")
 def test_update_catch(tmp_path: Path):
     """

@@ -34,6 +34,7 @@ RUN git config --system user.name "Packit" \
 
 COPY README.md setup.cfg setup.py files/gitconfig files/run_worker.sh /src/
 COPY dist2src /src/dist2src
+RUN ln -s -f /src/pyproject.toml /pyproject.toml
 # setuptools-scm
 COPY .git /src/.git
 

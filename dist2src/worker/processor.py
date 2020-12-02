@@ -151,7 +151,7 @@ class Processor:
         )
 
         # Push the result to source-git.
-        # Update moves sg-start tag, we need --tags --force to move it in remote.
+        # Update moves the upstream ref tag, we need --tags --force to move it in remote.
         src_git_repo.git.push("origin", self.branch, tags=True, force=True)
         Pushgateway().push_created_update()
 
