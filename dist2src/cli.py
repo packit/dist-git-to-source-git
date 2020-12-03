@@ -11,6 +11,7 @@ import click
 
 from dist2src.core import Dist2Src
 from dist2src.constants import START_TAG_TEMPLATE
+from dist2src.worker.updater import Updater
 
 logger = logging.getLogger(__name__)
 
@@ -216,6 +217,14 @@ def convert(ctx, origin: str, dest: str):
         log_level=ctx.obj[VERBOSE_KEY],
     )
     d2s.convert(origin_branch, dest_branch)
+
+
+@cli.command()
+def check_updates():
+    """
+    Check if source-git repositories are up to date.
+    """
+    Updater().check_updates()
 
 
 if __name__ == "__main__":
