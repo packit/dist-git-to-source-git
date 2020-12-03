@@ -1,8 +1,6 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
 
-import os
-import re
 import shutil
 from logging import getLogger
 from pathlib import Path
@@ -11,24 +9,18 @@ from typing import Optional
 import git
 from ogr.services.pagure import PagureProject
 
-from ogr import PagureService
 from dist2src.core import Dist2Src
 from dist2src.worker.monitoring import Pushgateway
+from dist2src.worker.config import Configuration
 from dist2src.worker import logging as worker_logging
+from dist2src.worker import singular_fork
 
 logger = getLogger(__name__)
 
 
 class Processor:
     def __init__(self):
-        self.workdir = Path(os.getenv("D2S_WORKDIR", "/workdir"))
-        self.dist_git_host = os.getenv("D2S_DIST_GIT_HOST", "git.centos.org")
-        self.src_git_host = os.getenv("D2S_SRC_GIT_HOST", "git.stg.centos.org")
-        self.src_git_token = os.getenv("D2S_SRC_GIT_TOKEN")
-        self.dist_git_token = os.getenv("D2S_DIST_GIT_TOKEN")
-        self.dist_git_namespace = os.getenv("D2S_DIST_GIT_NAMESPACE", "rpms")
-        self.src_git_namespace = os.getenv("D2S_SRC_GIT_NAMESPACE", "source-git")
-        self.branches_watched = os.getenv("D2S_BRANCHES_WATCHED", "c8s,c8").split(",")
+        self.cfg = Configuration()
 
         self.fullname: Optional[str] = None
         self.name: Optional[str] = None
@@ -42,39 +34,32 @@ class Processor:
         self.name = event["repo"]["name"]
         self.branch = event["branch"]
         self.end_commit = event["end_commit"]
-        self.dist_git_dir = self.workdir / self.dist_git_namespace / self.name
-        self.src_git_dir = self.workdir / self.src_git_namespace / self.name
+        self.dist_git_dir = self.cfg.workdir / self.cfg.dist_git_namespace / self.name
+        self.src_git_dir = self.cfg.workdir / self.cfg.src_git_namespace / self.name
 
         logger.info(f"Processing message with {event}")
         # Is this a repository in the rpms namespace?
-        if not self.fullname.startswith(self.dist_git_namespace):
+        if not self.fullname.startswith(self.cfg.dist_git_namespace):
             logger.info(
                 f"Ignore update event for {self.fullname}. "
-                f"Not in the '{self.dist_git_namespace}' namespace."
+                f"Not in the '{self.cfg.dist_git_namespace}' namespace."
             )
             Pushgateway().push_received_message(ignored=True)
             return
 
         # Should this branch be updated?
-        if self.branch not in self.branches_watched:
+        if self.branch not in self.cfg.branches_watched:
             logger.info(
                 f"Ignore update event for {self.fullname}. "
                 f"Branch {self.branch!r} is not one of the "
-                f"watched branches: {self.branches_watched}."
+                f"watched branches: {self.cfg.branches_watched}."
             )
             Pushgateway().push_received_message(ignored=True)
             return
 
         # Does this repository have a source-git equivalent?
-        src_git_service = PagureService(
-            instance_url=f"https://{self.src_git_host}", token=self.src_git_token
-        )
-        # When the namespace is a fork, "fork" is singular when accessing
-        # the API, but plural in the Git URLs.
-        # Keep this here, so we can test with forks.
-        src_git_namespace = re.sub(r"^forks\/", "fork/", self.src_git_namespace)
-        src_git_project = src_git_service.get_project(
-            namespace=src_git_namespace, repo=self.name
+        src_git_project = self.cfg.src_git_svc.get_project(
+            namespace=singular_fork(self.cfg.src_git_namespace), repo=self.name
         )
         if not src_git_project.exists():
             logger.info(
@@ -109,7 +94,7 @@ class Processor:
         self.cleanup()
         # Clone repo from rpms/ and checkout the branch.
         dist_git_repo = git.Repo.clone_from(
-            f"https://{self.dist_git_host}/{self.fullname}.git", self.dist_git_dir
+            f"https://{self.cfg.dist_git_host}/{self.fullname}.git", self.dist_git_dir
         )
         dist_git_repo.git.checkout(self.branch)
 
