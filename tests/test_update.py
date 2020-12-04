@@ -17,7 +17,11 @@ from requre.online_replacing import (
     apply_decorator_to_all_methods,
     replace_module_match,
 )
-from requre.modules_decorate_all_methods import record_git_module, record_requests_module, record_tempfile_module
+from requre.modules_decorate_all_methods import (
+    record_git_module,
+    record_requests_module,
+    record_tempfile_module,
+)
 
 from tests.conftest import (
     MOCK_BUILD,
@@ -27,6 +31,7 @@ from tests.conftest import (
     run_packit,
     clone_package,
 )
+
 
 @record_requests_module
 @record_git_module
@@ -75,14 +80,21 @@ class Update(unittest.TestCase):
         perform an update from a previous dist-git commit (HEAD~1)
         to the last one (HEAD)
         """
-        clone_package(self.package_name, dist_git_path=str(self.dist_git_path), branch=self.branch)
+        clone_package(
+            self.package_name, dist_git_path=str(self.dist_git_path), branch=self.branch
+        )
         subprocess.check_call(
             ["git", "reset", "--hard", "HEAD~1"],
             cwd=self.dist_git_path,
         )
 
         run_dist2src(
-            ["-vvv", "convert", f"{self.dist_git_path}:{self.branch}", f"{self.sg_path}:{self.branch}"]
+            [
+                "-vvv",
+                "convert",
+                f"{self.dist_git_path}:{self.branch}",
+                f"{self.sg_path}:{self.branch}",
+            ]
         )
         # the source-git repo cannot be dirty after the conversion
         assert_repo_is_not_dirty(self.sg_path)
@@ -93,7 +105,12 @@ class Update(unittest.TestCase):
         )
 
         run_dist2src(
-            ["-vvv", "convert", f"{self.dist_git_path}:{self.branch}", f"{self.sg_path}:{self.branch}"]
+            [
+                "-vvv",
+                "convert",
+                f"{self.dist_git_path}:{self.branch}",
+                f"{self.sg_path}:{self.branch}",
+            ]
         )
         assert_repo_is_not_dirty(self.sg_path)
 
