@@ -13,6 +13,7 @@
 - include_tasks: ./deploy-configmaps.yml
 - include_tasks: ./deploy-redis.yml
 - include_tasks: ./deploy-workers.yml
+- include_tasks: ./deploy-cronjobs.yml
 - include_tasks: ./deploy-centosmsg.yml
 - include_tasks: ./deploy-pushgateway-nginx.yml
 - include_tasks: ./wait-for-pods.yml

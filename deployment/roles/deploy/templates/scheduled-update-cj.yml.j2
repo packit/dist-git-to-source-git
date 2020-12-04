@@ -1,0 +1,33 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: scheduled-update
+spec:
+  schedule: "11 22 * * *"
+  concurrencyPolicy: "Replace"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            parent: scheduled-update-cronjob
+        spec:
+          containers:
+            - name: scheduled-update
+              image: worker:latest
+              command: ["dist2src", "-v", "check-updates"]
+              envFrom:
+                - configMapRef:
+                    name: env-config
+                - configMapRef:
+                    name: worker-config
+                - secretRef:
+                    name: git-tokens
+              resources:
+                limits:
+                  memory: "80Mi"
+                  cpu: "100m"
+          restartPolicy: Never
