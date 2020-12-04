@@ -10,6 +10,7 @@ from ogr.services.pagure import PagureProject
 
 from dist2src.worker import singular_fork, plural_fork
 from dist2src.worker.config import Configuration
+from dist2src.worker.monitoring import Pushgateway
 
 logger = getLogger(__name__)
 
@@ -55,6 +56,7 @@ class Updater:
                         f"{dist_git_project.full_repo_name!r} does not exist in "
                         f"{self.cfg.dist_git_host!r}"
                     )
+                    Pushgateway().push_found_missing_dist_git_repo()
                     continue
 
                 for branch, commit in self._out_of_date_branches(
@@ -110,3 +112,4 @@ class Updater:
         }
         r = celery_app.send_task(name=task_name, kwargs={"event": event})
         logger.info(f"Task UUID={r.id} sent to Celery.")
+        Pushgateway().push_created_update_task()
