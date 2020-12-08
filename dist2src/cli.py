@@ -11,6 +11,7 @@ import click
 
 from dist2src.core import Dist2Src
 from dist2src.constants import START_TAG_TEMPLATE
+from dist2src.worker.updater import Updater
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +23,16 @@ VERBOSE_KEY = "VERBOSE"
 @click.option(
     "-v", "--verbose", count=True, help="Increase verbosity. Repeat to log more."
 )
+@click.option(
+    "-t",
+    "--log-timestamps",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Print timestamps for log messages.",
+)
 @click.pass_context
-def cli(ctx, verbose):
+def cli(ctx, verbose, log_timestamps):
     """Script to convert the tip of a branch from a dist-git repository
     into a commit on a branch in a source-git repository.
 
@@ -69,6 +78,13 @@ def cli(ctx, verbose):
     global_logger.setLevel(level)
     handler = logging.StreamHandler()
     handler.setLevel(level)
+
+    if log_timestamps:
+        formatter = logging.Formatter(
+            "[%(asctime)s %(filename)s %(levelname)s] %(message)s"
+        )
+        handler.setFormatter(formatter)
+
     global_logger.addHandler(handler)
 
 
@@ -216,6 +232,14 @@ def convert(ctx, origin: str, dest: str):
         log_level=ctx.obj[VERBOSE_KEY],
     )
     d2s.convert(origin_branch, dest_branch)
+
+
+@cli.command()
+def check_updates():
+    """
+    Check if source-git repositories are up to date.
+    """
+    Updater().check_updates()
 
 
 if __name__ == "__main__":

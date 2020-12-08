@@ -8,9 +8,7 @@ logger = logging.getLogger(__name__)
 
 class Pushgateway:
     def __init__(self):
-        self.pushgateway_address = os.getenv(
-            "PUSHGATEWAY_ADDRESS", "http://pushgateway"
-        )
+        self.pushgateway_address = os.getenv("PUSHGATEWAY_ADDRESS")
         self.registry = CollectorRegistry()
 
         # metrics
@@ -24,6 +22,18 @@ class Pushgateway:
         self.created_updates = Counter(
             "created_updates",
             "Number of created updates",
+            registry=self.registry,
+        )
+
+        self.found_missing_dist_git_repo = Counter(
+            "found_missing_dist_git_repo",
+            "Number of dist-git repositories found missing by the scheduled updater.",
+            registry=self.registry,
+        )
+
+        self.created_update_task = Counter(
+            "created_update_task",
+            "Number of update tasks created for out-of-date source-git repos.",
             registry=self.registry,
         )
 
@@ -57,4 +67,21 @@ class Pushgateway:
         self.received_messages.labels(
             result="ignored" if ignored else "not_ignored"
         ).inc()
+        self.push()
+
+    def push_found_missing_dist_git_repo(self):
+        """
+        Push info about finding a dist-git repo missing to Pushgateway
+        :return:
+        """
+        self.found_missing_dist_git_repo.inc()
+        self.push()
+
+    def push_created_update_task(self):
+        """
+        Push info about creating a task to update an out-of-date
+        source-git repo to Pushgateway
+        :return:
+        """
+        self.created_update_task.inc()
         self.push()

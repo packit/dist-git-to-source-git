@@ -1,0 +1,15 @@
+# Copyright Contributors to the Packit project.
+# SPDX-License-Identifier: MIT
+
+---
+- name: Deploy CronJobs
+  k8s:
+    namespace: "{{ project }}"
+    resource_definition: "{{ item }}"
+    host: "{{ host }}"
+    api_key: "{{ api_key }}"
+    validate_certs: "{{ validate_certs }}"
+  with_template:
+    - scheduled-update-cj.yml.j2
+  tags:
+    - cronjobs
