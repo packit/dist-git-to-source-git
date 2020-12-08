@@ -28,6 +28,12 @@ class Updater:
         self.cfg = configuration or Configuration()
 
     def check_updates(self):
+        logger.debug(f"Source-git API: {self.cfg.src_git_svc.api_url!r}")
+        logger.debug(f"Source-git namespace: {self.cfg.src_git_namespace!r}")
+        logger.debug(f"Dist-git API: {self.cfg.dist_git_svc.api_url!r}")
+        logger.debug(f"Dist-git namespace: {self.cfg.dist_git_namespace!r}")
+        logger.debug(f"Dist-git branches watched: {self.cfg.branches_watched!r}")
+
         m = re.match(
             r"(?P<fork>forks\/)?((?P<owner>.+)\/)?(?P<namespace>.+)",
             self.cfg.src_git_namespace,
@@ -46,7 +52,11 @@ class Updater:
             r = self.cfg.src_git_svc.call_api(url, params=params)
             # The URL in 'next' already has the required parameters
             url, params = r["pagination"]["next"], None
+            logger.debug(
+                f"Next page: {url!r}. Total pages: {r['pagination']['pages']!r}."
+            )
             for src_git_project in r["projects"]:
+                logger.debug(f"Checking project {src_git_project['name']!r}...")
                 dist_git_project = self.cfg.dist_git_svc.get_project(
                     namespace=singular_fork(self.cfg.dist_git_namespace),
                     repo=src_git_project["name"],
@@ -83,13 +93,17 @@ class Updater:
             for b, c in r["branches"].items()
             if b in self.cfg.branches_watched
         }
+        expected_tags_set = set(expected_tags)
+        logger.debug(f"Tags expected in source-git: {expected_tags_set}")
 
         # Get tags from source-git
         src_git_project = self.cfg.src_git_svc.get_project(
             namespace=singular_fork(self.cfg.src_git_namespace), repo=project
         )
         src_git_tags = set(tag.name for tag in src_git_project.get_tags())
-        missing_tags = set(expected_tags) - src_git_tags
+        logger.debug(f"Current tags in source-git: {src_git_tags}")
+        missing_tags = expected_tags_set - src_git_tags
+        logger.debug(f"Tags missing from source-git: {missing_tags}")
         return [expected_tags[tag] for tag in missing_tags]
 
     def _create_task(self, project: PagureProject, branch: str, commit: str):
@@ -110,6 +124,7 @@ class Updater:
             "branch": branch,
             "end_commit": commit,
         }
+        logger.debug(f"Sending task {task_name!r}, with payload: {event}")
         r = celery_app.send_task(name=task_name, kwargs={"event": event})
         logger.info(f"Task UUID={r.id} sent to Celery.")
         Pushgateway().push_created_update_task()

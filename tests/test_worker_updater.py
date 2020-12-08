@@ -127,24 +127,25 @@ def test_check_updates():
     A Celery task is created for each out-of-date branch in these projects.
     """
     src_git_svc = flexmock(api_url="https://git.centos.org/api/0/")
-    dist_git_svc = flexmock()
+    dist_git_svc = flexmock(api_url="https://git.centos.org/api/0/")
     config = flexmock(
         src_git_namespace="source-git",
         src_git_svc=src_git_svc,
         dist_git_svc=dist_git_svc,
         dist_git_namespace="rpms",
         dist_git_host="git.centos.org",
+        branches_watched=["c8", "c8s"],
     )
     responses = [
         {
-            "pagination": {"next": "https://next.page?param=value"},
+            "pagination": {"next": "https://next.page?param=value", "pages": 2},
             "projects": [
                 {"name": "acl"},
                 {"name": "rsync"},
             ],
         },
         {
-            "pagination": {"next": None},
+            "pagination": {"next": None, "pages": 2},
             "projects": [
                 {"name": "kernel"},
                 {"name": "systemd"},
