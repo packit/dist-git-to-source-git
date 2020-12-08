@@ -8,9 +8,7 @@ logger = logging.getLogger(__name__)
 
 class Pushgateway:
     def __init__(self):
-        self.pushgateway_address = os.getenv(
-            "PUSHGATEWAY_ADDRESS", "http://pushgateway"
-        )
+        self.pushgateway_address = os.getenv("PUSHGATEWAY_ADDRESS")
         self.registry = CollectorRegistry()
 
         # metrics
