@@ -23,8 +23,16 @@ VERBOSE_KEY = "VERBOSE"
 @click.option(
     "-v", "--verbose", count=True, help="Increase verbosity. Repeat to log more."
 )
+@click.option(
+    "-t",
+    "--log-timestamps",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Print timestamps for log messages.",
+)
 @click.pass_context
-def cli(ctx, verbose):
+def cli(ctx, verbose, log_timestamps):
     """Script to convert the tip of a branch from a dist-git repository
     into a commit on a branch in a source-git repository.
 
@@ -70,6 +78,13 @@ def cli(ctx, verbose):
     global_logger.setLevel(level)
     handler = logging.StreamHandler()
     handler.setLevel(level)
+
+    if log_timestamps:
+        formatter = logging.Formatter(
+            "[%(asctime)s %(filename)s %(levelname)s] %(message)s"
+        )
+        handler.setFormatter(formatter)
+
     global_logger.addHandler(handler)
 
 

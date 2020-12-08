@@ -18,7 +18,7 @@ spec:
           containers:
             - name: scheduled-update
               image: worker:latest
-              command: ["dist2src", "-v", "check-updates"]
+              command: ["dist2src", "-vvt", "check-updates"]
               envFrom:
                 - configMapRef:
                     name: env-config
