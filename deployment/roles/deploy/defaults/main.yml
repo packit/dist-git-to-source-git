@@ -58,3 +58,6 @@ src_git_namespace: source-git
 
 mqtt_host: mqtt.git.centos.org
 mqtt_topics: git.centos.org/#
+
+# Seconds until Celery tasks created by the scheduled update job expire
+update_task_expires: 82800

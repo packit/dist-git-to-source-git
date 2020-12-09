@@ -33,6 +33,12 @@ class Updater:
         logger.debug(f"Dist-git API: {self.cfg.dist_git_svc.api_url!r}")
         logger.debug(f"Dist-git namespace: {self.cfg.dist_git_namespace!r}")
         logger.debug(f"Dist-git branches watched: {self.cfg.branches_watched!r}")
+        if self.cfg.update_task_expires:
+            logger.debug(
+                f"Celery tasks created are valid for {self.cfg.update_task_expires} seconds"
+            )
+        else:
+            logger.debug("Celery tasks created never expire")
 
         m = re.match(
             r"(?P<fork>forks\/)?((?P<owner>.+)\/)?(?P<namespace>.+)",
@@ -125,6 +131,10 @@ class Updater:
             "end_commit": commit,
         }
         logger.debug(f"Sending task {task_name!r}, with payload: {event}")
-        r = celery_app.send_task(name=task_name, kwargs={"event": event})
+        r = celery_app.send_task(
+            name=task_name,
+            expires=self.cfg.update_task_expires,
+            kwargs={"event": event},
+        )
         logger.info(f"Task UUID={r.id} sent to Celery.")
         Pushgateway().push_created_update_task()
