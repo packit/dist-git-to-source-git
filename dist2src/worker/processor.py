@@ -101,8 +101,12 @@ class Processor:
         # Check if the commit is the one we are expecting.
         if dist_git_repo.branches[self.branch].commit.hexsha != self.end_commit:
             logger.warning(
-                f"HEAD of {self.branch} is not matching {self.end_commit}, as expected."
+                f"Abandon updating {self.name}. "
+                f"HEAD of {self.branch!r} is not matching commit "
+                f"{self.end_commit!r} for which this updated was started."
             )
+            Pushgateway().push_abandoned_update()
+            return
 
         # Clone repo from source-git/ using ssh, so it can be pushed later on.
         src_git_ssh_url = project.get_git_urls()["ssh"]

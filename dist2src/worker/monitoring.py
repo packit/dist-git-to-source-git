@@ -19,6 +19,12 @@ class Pushgateway:
             registry=self.registry,
         )
 
+        self.abandoned_updates = Counter(
+            "abandoned_updates",
+            "Number of updates abandoned",
+            registry=self.registry,
+        )
+
         self.created_updates = Counter(
             "created_updates",
             "Number of created updates",
@@ -84,4 +90,13 @@ class Pushgateway:
         :return:
         """
         self.created_update_task.inc()
+        self.push()
+
+    def push_abandoned_update(self):
+        """
+        Push info about abandoning an update because the dist-git repo
+        has different content than the update event
+        :return:
+        """
+        self.abandoned_updates.inc()
         self.push()
