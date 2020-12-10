@@ -106,12 +106,16 @@ def test_create_celery_task():
     (
         flexmock(celery_app)
         .should_receive("send_task")
-        .with_args(name="task.dist2src.process_message", kwargs={"event": payload})
+        .with_args(
+            name="task.dist2src.process_message",
+            expires=3600,
+            kwargs={"event": payload},
+        )
         .and_return(flexmock(id="task_uuid"))
         .once()
     )
     flexmock(Pushgateway).should_receive("push_created_update_task").once()
-    updater = Updater(configuration=flexmock())
+    updater = Updater(configuration=flexmock(update_task_expires=3600))
     updater._create_task(
         flexmock(
             full_repo_name=payload["repo"]["fullname"], repo=payload["repo"]["name"]
@@ -135,6 +139,7 @@ def test_check_updates():
         dist_git_namespace="rpms",
         dist_git_host="git.centos.org",
         branches_watched=["c8", "c8s"],
+        update_task_expires=3600,
     )
     responses = [
         {

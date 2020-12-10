@@ -17,6 +17,9 @@ class Configuration:
         self.dist_git_namespace = os.getenv("D2S_DIST_GIT_NAMESPACE", "rpms")
         self.src_git_namespace = os.getenv("D2S_SRC_GIT_NAMESPACE", "source-git")
         self.branches_watched = os.getenv("D2S_BRANCHES_WATCHED", "c8s,c8").split(",")
+        self.update_task_expires = os.getenv("D2S_UPDATE_TASK_EXPIRES")
+        if self.update_task_expires is not None:
+            self.update_task_expires = int(self.update_task_expires)
 
         self._src_git_svc = None
         self._dist_git_svc = None
