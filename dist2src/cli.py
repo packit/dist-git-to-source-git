@@ -235,11 +235,15 @@ def convert(ctx, origin: str, dest: str):
 
 
 @cli.command()
-def check_updates():
+@click.argument("project", required=False, default=None, type=click.STRING)
+@click.argument("branch", required=False, default=None, type=click.STRING)
+def check_updates(project, branch):
     """
     Check if source-git repositories are up to date.
+
+    Limit the search to PROJECT, and BRANCH, if specified.
     """
-    Updater().check_updates()
+    Updater().check_updates(project, branch)
 
 
 if __name__ == "__main__":

@@ -164,6 +164,7 @@ def test_check_updates():
             f"{src_git_svc.api_url}projects",
             params={
                 "namespace": config.src_git_namespace,
+                "pattern": None,
                 "fork": False,
                 "per_page": 100,
                 "owner": None,

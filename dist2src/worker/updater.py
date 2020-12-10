@@ -27,7 +27,16 @@ class Updater:
     def __init__(self, configuration: Optional[Configuration] = None):
         self.cfg = configuration or Configuration()
 
-    def check_updates(self):
+    def check_updates(
+        self, project: Optional[str] = None, branch: Optional[str] = None
+    ):
+        """
+        Check if repositories in a soource-git namespace need to be updated
+        and create Celery tasks to update them, if configured and needed.
+
+        Limit the checks to 'project' and 'branch', if the arguments are
+        specified.
+        """
         logger.debug(f"Source-git API: {self.cfg.src_git_svc.api_url!r}")
         logger.debug(f"Source-git namespace: {self.cfg.src_git_namespace!r}")
         logger.debug(f"Dist-git API: {self.cfg.dist_git_svc.api_url!r}")
@@ -49,6 +58,7 @@ class Updater:
         url = f"{self.cfg.src_git_svc.api_url}projects"
         params = {
             "namespace": m["namespace"],
+            "pattern": project,
             "fork": m["fork"] is not None,
             "per_page": self.PROJECTS_PER_PAGE,
             "owner": m["owner"] or None,
@@ -75,16 +85,18 @@ class Updater:
                     Pushgateway().push_found_missing_dist_git_repo()
                     continue
 
-                for branch, commit in self._out_of_date_branches(
+                for _branch, _commit in self._out_of_date_branches(
                     src_git_project["name"]
                 ):
                     logger.info(
-                        f"Branch {branch!r} from project "
+                        f"Branch {_branch!r} from project "
                         f"{src_git_project['name']!r} needs to be updated."
                     )
-                    self._create_task(dist_git_project, branch, commit)
+                    self._create_task(dist_git_project, _branch, _commit)
 
-    def _out_of_date_branches(self, project: str) -> List[Tuple[str, str]]:
+    def _out_of_date_branches(
+        self, project: str, branch: Optional[str] = None
+    ) -> List[Tuple[str, str]]:
         # Get branches with commits from their HEAD from dist-git
         url = (
             f"{self.cfg.dist_git_svc.api_url}"
@@ -97,7 +109,7 @@ class Updater:
         expected_tags = {
             f"convert/{b}/{c}": (b, c)
             for b, c in r["branches"].items()
-            if b in self.cfg.branches_watched
+            if b in [*self.cfg.branches_watched, branch]
         }
         expected_tags_set = set(expected_tags)
         logger.debug(f"Tags expected in source-git: {expected_tags_set}")
