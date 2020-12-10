@@ -21,7 +21,7 @@ image_worker: quay.io/packit/dist2src:{{ deployment }}
 image_centosmsg: docker.io/usercont/packit-service-centosmsg:prod
 
 # How many workers
-worker_replicas: 1
+worker_replicas: 2
 
 # sent by centosmsg pod and processed by worker(s)
 celery_task_name: task.dist2src.process_message
