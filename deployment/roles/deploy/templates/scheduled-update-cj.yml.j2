@@ -14,6 +14,10 @@ spec:
         metadata:
           labels:
             parent: scheduled-update-cronjob
+          # so that images are first looked up in image streams
+          # configured with: oc set image-lookup cj/scheduled-update
+          annotations:
+            alpha.image.policy.openshift.io/resolve-names: '*'
         spec:
           containers:
             - name: scheduled-update

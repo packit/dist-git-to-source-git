@@ -12,7 +12,7 @@ metadata:
     # I run the following and then checked how the resulting yaml looks like.
     # oc set triggers sts/worker --from-image=worker:latest -c worker
     image.openshift.io/triggers: >-
-      [{"from":{"kind":"ImageStreamTag","name":"worker:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"worker\")].image"}]
+      [{"from":{"kind":"ImageStreamTag","name":"worker:{{ deployment }}"},"fieldPath":"spec.template.spec.containers[?(@.name==\"worker\")].image"}]
 spec:
   selector:
     matchLabels:
@@ -42,7 +42,7 @@ spec:
             secretName: d2s-ssh
       containers:
         - name: worker
-          image: worker:latest
+          image: worker:{{ deployment }}
           env:
             - name: APP
               value: dist2src.worker.tasks
