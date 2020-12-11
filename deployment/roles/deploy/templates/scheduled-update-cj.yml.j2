@@ -5,6 +5,11 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   name: scheduled-update
+  annotations:
+    # Required so that the image reference bellow is updated, when the ImageStreamTag
+    # gets updated. Can be set on the object with:
+    # oc set triggers cj/scheduled-update --from-image=worker:{{ deployment }} -c scheduled-update
+    image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"worker:{{ deployment }}"},"fieldPath":"spec.jobTemplate.spec.template.spec.containers[?(@.name==\"scheduled-update\")].image"}]'
 spec:
   schedule: "11 22 * * *"
   concurrencyPolicy: "Replace"
