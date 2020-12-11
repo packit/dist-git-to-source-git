@@ -21,7 +21,7 @@ spec:
         spec:
           containers:
             - name: scheduled-update
-              image: worker:latest
+              image: worker:{{ deployment }}
               command: ["dist2src", "-vvt", "check-updates"]
               envFrom:
                 - configMapRef:
