@@ -402,8 +402,14 @@ class Dist2Src:
             try:
                 running_cmd = rpmbuild(*rpmbuild_args)
             except sh.ErrorReturnCode as e:
+                # This might create a tons of error logs.
+                # Create a child logger, so that it's possible to filter
+                # for them, for example in Sentry.
+                rpmbuild_logger = logger.getChild("rpmbuild")
                 for line in e.stderr.splitlines():
-                    logger.error(str(line))
+                    rpmbuild_logger.error(str(line))
+                # Also log the failure using the main logger.
+                logger.error(f"{running_cmd.cmd} failed")
                 raise
 
             self.dist_git.repo.git.checkout(self.relative_specfile_path)
