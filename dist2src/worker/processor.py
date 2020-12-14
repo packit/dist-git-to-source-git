@@ -145,7 +145,16 @@ class Processor:
         Pushgateway().push_created_update()
 
     def cleanup(self):
-        if self.dist_git_dir:
-            shutil.rmtree(self.dist_git_dir, ignore_errors=True)
-        if self.src_git_dir:
-            shutil.rmtree(self.src_git_dir, ignore_errors=True)
+        """
+        Clean up the working directory.
+
+        This is safe, as long as no parallel work is done in this directory.
+        """
+        logger.debug(f"Cleaning up {self.cfg.workdir}...")
+        for item in self.cfg.workdir.glob("*"):
+            if item.is_dir():
+                logger.debug(f"rm -rf {item}")
+                shutil.rmtree(item, ignore_errors=True)
+            else:
+                logger.debug(f"rm {item}")
+                item.unlink()
