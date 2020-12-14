@@ -86,7 +86,7 @@ class Updater:
                     continue
 
                 for _branch, _commit in self._out_of_date_branches(
-                    src_git_project["name"]
+                    src_git_project["name"], branch
                 ):
                     logger.info(
                         f"Branch {_branch!r} from project "
@@ -104,12 +104,16 @@ class Updater:
         )
         r = self.cfg.dist_git_svc.call_api(url, params={"with_commits": True})
 
+        branch_filter = None
+        if branch:
+            branch_filter = lambda x: x == branch  # noqa
+
         # Use a dict here, to save the branch corresponding to each convert-tag,
         # so that it doesn't need to be calculated again.
         expected_tags = {
             f"convert/{b}/{c}": (b, c)
             for b, c in r["branches"].items()
-            if b in [*self.cfg.branches_watched, branch]
+            if b in filter(branch_filter, self.cfg.branches_watched)
         }
         expected_tags_set = set(expected_tags)
         logger.debug(f"Tags expected in source-git: {expected_tags_set}")
