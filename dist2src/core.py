@@ -409,7 +409,7 @@ class Dist2Src:
                 for line in e.stderr.splitlines():
                     rpmbuild_logger.error(str(line))
                 # Also log the failure using the main logger.
-                logger.error(f"{running_cmd.cmd} failed")
+                logger.error(f"{['rpmbuild', *rpmbuild_args]} failed")
                 raise
 
             self.dist_git.repo.git.checkout(self.relative_specfile_path)
@@ -502,22 +502,18 @@ class Dist2Src:
                 START_TAG_TEMPLATE.format(branch=dest_branch),
             )
 
-    def copy_prep_content(self):
+    def move_prep_content(self):
         """
         For the single-commit source-git repos, we don't care about the
         git repo created in BUILD/<PACKAGE-VERSION> since it's wrong
-        hence we only copy the content to the source-git repo and commit it
+        hence we only move the content to the source-git repo and commit it
         """
         for entry in self.BUILD_repo_path.iterdir():
-            if entry.is_file():
-                logger.debug(f"copy {entry} -> {self.source_git_path}")
-                shutil.copy2(entry, self.source_git_path)
-            else:  # it's a dir
-                if entry.name == ".git":
-                    continue
-                dst = self.source_git_path.joinpath(entry.name)
-                logger.debug(f"copy {entry} -> {dst}")
-                shutil.copytree(entry, dst)
+            if entry.name != ".git":
+                logger.debug(f"move {entry} -> {self.source_git_path}")
+                # 'move' has issues with Path objects in older Python
+                # https://github.com/python/cpython/pull/15326
+                shutil.move(str(entry), str(self.source_git_path))
 
     def convert_single_commit(self, origin_branch: str, dest_branch: str):
         """
@@ -547,7 +543,7 @@ class Dist2Src:
         # expand dist-git and pull the history
         self.fetch_archive()
         self.run_prep(ensure_autosetup=False)
-        self.copy_prep_content()
+        self.move_prep_content()
 
         # configure packit
         source_git_tag = START_TAG_TEMPLATE.format(branch=dest_branch)
