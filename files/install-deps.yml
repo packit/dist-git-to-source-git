@@ -47,7 +47,7 @@
           - python3-devel
         state: latest
     - name: Install gtk-doc
-      shell: dnf --enablerepo=PowerTools --setopt=PowerTools.module_hotfixes=true install -y javapackages-local gtk-doc
+      shell: dnf --enablerepo=powertools --setopt=powertools.module_hotfixes=true install -y javapackages-local gtk-doc
       args:
         warn: no
     - name: Install python3-ipython to speed up ipdb install
