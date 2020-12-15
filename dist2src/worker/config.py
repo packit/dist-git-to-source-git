@@ -5,6 +5,7 @@ import os
 
 from pathlib import Path
 from ogr import PagureService
+from requests.packages.urllib3.util import Retry
 
 
 class Configuration:
@@ -23,12 +24,19 @@ class Configuration:
 
         self._src_git_svc = None
         self._dist_git_svc = None
+        self._retries = Retry(
+            total=5,
+            backoff_factor=1,
+            status_forcelist=Retry.RETRY_AFTER_STATUS_CODES.union([404]),
+        )
 
     @property
     def src_git_svc(self) -> PagureService:
         if self._src_git_svc is None:
             self._src_git_svc = PagureService(
-                instance_url=f"https://{self.src_git_host}", token=self.src_git_token
+                instance_url=f"https://{self.src_git_host}",
+                token=self.src_git_token,
+                max_retries=self._retries,
             )
         return self._src_git_svc
 
@@ -36,6 +44,8 @@ class Configuration:
     def dist_git_svc(self) -> PagureService:
         if self._dist_git_svc is None:
             self._dist_git_svc = PagureService(
-                instance_url=f"https://{self.dist_git_host}", token=self.dist_git_token
+                instance_url=f"https://{self.dist_git_host}",
+                token=self.dist_git_token,
+                max_retries=self._retries,
             )
         return self._dist_git_svc
