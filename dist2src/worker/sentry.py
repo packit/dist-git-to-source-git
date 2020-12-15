@@ -20,6 +20,7 @@ def configure_sentry(runner_type: str) -> None:
     # so that we don't have to have sentry sdk installed locally
     from sentry_sdk import init, configure_scope
     from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.logging import ignore_logger
 
     init(
         dsn=getenv("SENTRY_DSN"),
@@ -28,3 +29,6 @@ def configure_sentry(runner_type: str) -> None:
     )
     with configure_scope() as scope:
         scope.set_tag("runner-type", runner_type)
+
+    # Ignore the error logs from the 'rpmbuild' command
+    ignore_logger("dist2src.core.rpmbuild")
