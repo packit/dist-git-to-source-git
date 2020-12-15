@@ -28,6 +28,12 @@ spec:
             - name: scheduled-update
               image: worker:{{ deployment }}
               command: ["dist2src", "-vvt", "check-updates"]
+              env:
+                - name: SENTRY_DSN
+                  valueFrom:
+                    secretKeyRef:
+                      name: sentry
+                      key: dsn
               envFrom:
                 - configMapRef:
                     name: env-config

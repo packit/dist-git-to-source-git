@@ -10,6 +10,7 @@ from ogr.services.pagure import PagureProject
 from ogr.exceptions import OgrException
 
 from dist2src.worker import singular_fork, plural_fork
+from dist2src.worker import sentry
 from dist2src.worker.config import Configuration
 from dist2src.worker.monitoring import Pushgateway
 
@@ -43,6 +44,7 @@ class Updater:
         logger.debug(f"Dist-git API: {self.cfg.dist_git_svc.api_url!r}")
         logger.debug(f"Dist-git namespace: {self.cfg.dist_git_namespace!r}")
         logger.debug(f"Dist-git branches watched: {self.cfg.branches_watched!r}")
+        sentry.configure_sentry(runner_type="scheduled-update")
         if self.cfg.update_task_expires:
             logger.debug(
                 f"Celery tasks created are valid for {self.cfg.update_task_expires} seconds"
