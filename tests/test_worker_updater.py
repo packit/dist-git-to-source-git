@@ -204,7 +204,7 @@ def test_check_updates():
         (
             flexmock(Updater)
             .should_receive("_out_of_date_branches")
-            .with_args(project)
+            .with_args(project, None)
             .and_return([] if project != "rsync" else [("c8s", "commit_hash")])
         )
     # tasks are only created for out-of-date projects

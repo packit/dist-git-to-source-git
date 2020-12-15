@@ -7,6 +7,7 @@ import re
 from logging import getLogger
 from typing import List, Optional, Tuple
 from ogr.services.pagure import PagureProject
+from ogr.exceptions import OgrException
 
 from dist2src.worker import singular_fork, plural_fork
 from dist2src.worker.config import Configuration
@@ -72,27 +73,33 @@ class Updater:
                 f"Next page: {url!r}. Total pages: {r['pagination']['pages']!r}."
             )
             for src_git_project in r["projects"]:
-                logger.debug(f"Checking project {src_git_project['name']!r}...")
-                dist_git_project = self.cfg.dist_git_svc.get_project(
-                    namespace=singular_fork(self.cfg.dist_git_namespace),
-                    repo=src_git_project["name"],
-                )
-                if not dist_git_project.exists():
-                    logger.warning(
-                        f"{dist_git_project.full_repo_name!r} does not exist in "
-                        f"{self.cfg.dist_git_host!r}"
+                try:
+                    self._check_project(src_git_project["name"], branch)
+                except OgrException:
+                    logger.exception(
+                        f"Failed checking project {src_git_project['name']!r}"
                     )
-                    Pushgateway().push_found_missing_dist_git_repo()
                     continue
 
-                for _branch, _commit in self._out_of_date_branches(
-                    src_git_project["name"], branch
-                ):
-                    logger.info(
-                        f"Branch {_branch!r} from project "
-                        f"{src_git_project['name']!r} needs to be updated."
-                    )
-                    self._create_task(dist_git_project, _branch, _commit)
+    def _check_project(self, project: str, branch: Optional[str] = None):
+        logger.debug(f"Checking project {project!r}...")
+        dist_git_project = self.cfg.dist_git_svc.get_project(
+            namespace=singular_fork(self.cfg.dist_git_namespace),
+            repo=project,
+        )
+        if not dist_git_project.exists():
+            logger.warning(
+                f"{dist_git_project.full_repo_name!r} does not exist in "
+                f"{self.cfg.dist_git_host!r}"
+            )
+            Pushgateway().push_found_missing_dist_git_repo()
+            return
+
+        for _branch, _commit in self._out_of_date_branches(project, branch):
+            logger.info(
+                f"Branch {_branch!r} from project {project!r} needs to be updated."
+            )
+            self._create_task(dist_git_project, _branch, _commit)
 
     def _out_of_date_branches(
         self, project: str, branch: Optional[str] = None
