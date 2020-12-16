@@ -7,8 +7,10 @@ import re
 from logging import getLogger
 from typing import List, Optional, Tuple
 from ogr.services.pagure import PagureProject
+from ogr.exceptions import OgrException
 
 from dist2src.worker import singular_fork, plural_fork
+from dist2src.worker import sentry
 from dist2src.worker.config import Configuration
 from dist2src.worker.monitoring import Pushgateway
 
@@ -42,6 +44,7 @@ class Updater:
         logger.debug(f"Dist-git API: {self.cfg.dist_git_svc.api_url!r}")
         logger.debug(f"Dist-git namespace: {self.cfg.dist_git_namespace!r}")
         logger.debug(f"Dist-git branches watched: {self.cfg.branches_watched!r}")
+        sentry.configure_sentry(runner_type="scheduled-update")
         if self.cfg.update_task_expires:
             logger.debug(
                 f"Celery tasks created are valid for {self.cfg.update_task_expires} seconds"
@@ -72,27 +75,33 @@ class Updater:
                 f"Next page: {url!r}. Total pages: {r['pagination']['pages']!r}."
             )
             for src_git_project in r["projects"]:
-                logger.debug(f"Checking project {src_git_project['name']!r}...")
-                dist_git_project = self.cfg.dist_git_svc.get_project(
-                    namespace=singular_fork(self.cfg.dist_git_namespace),
-                    repo=src_git_project["name"],
-                )
-                if not dist_git_project.exists():
-                    logger.warning(
-                        f"{dist_git_project.full_repo_name!r} does not exist in "
-                        f"{self.cfg.dist_git_host!r}"
+                try:
+                    self._check_project(src_git_project["name"], branch)
+                except OgrException:
+                    logger.exception(
+                        f"Failed checking project {src_git_project['name']!r}"
                     )
-                    Pushgateway().push_found_missing_dist_git_repo()
                     continue
 
-                for _branch, _commit in self._out_of_date_branches(
-                    src_git_project["name"]
-                ):
-                    logger.info(
-                        f"Branch {_branch!r} from project "
-                        f"{src_git_project['name']!r} needs to be updated."
-                    )
-                    self._create_task(dist_git_project, _branch, _commit)
+    def _check_project(self, project: str, branch: Optional[str] = None):
+        logger.debug(f"Checking project {project!r}...")
+        dist_git_project = self.cfg.dist_git_svc.get_project(
+            namespace=singular_fork(self.cfg.dist_git_namespace),
+            repo=project,
+        )
+        if not dist_git_project.exists():
+            logger.warning(
+                f"{dist_git_project.full_repo_name!r} does not exist in "
+                f"{self.cfg.dist_git_host!r}"
+            )
+            Pushgateway().push_found_missing_dist_git_repo()
+            return
+
+        for _branch, _commit in self._out_of_date_branches(project, branch):
+            logger.info(
+                f"Branch {_branch!r} from project {project!r} needs to be updated."
+            )
+            self._create_task(dist_git_project, _branch, _commit)
 
     def _out_of_date_branches(
         self, project: str, branch: Optional[str] = None
@@ -104,12 +113,16 @@ class Updater:
         )
         r = self.cfg.dist_git_svc.call_api(url, params={"with_commits": True})
 
+        branch_filter = None
+        if branch:
+            branch_filter = lambda x: x == branch  # noqa
+
         # Use a dict here, to save the branch corresponding to each convert-tag,
         # so that it doesn't need to be calculated again.
         expected_tags = {
             f"convert/{b}/{c}": (b, c)
             for b, c in r["branches"].items()
-            if b in [*self.cfg.branches_watched, branch]
+            if b in filter(branch_filter, self.cfg.branches_watched)
         }
         expected_tags_set = set(expected_tags)
         logger.debug(f"Tags expected in source-git: {expected_tags_set}")

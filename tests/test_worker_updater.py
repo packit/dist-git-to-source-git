@@ -5,6 +5,7 @@ import os
 
 from flexmock import flexmock
 
+from dist2src.worker import sentry
 from dist2src.worker.updater import Updater
 from dist2src.worker.monitoring import Pushgateway
 from dist2src.worker.celerizer import celery_app
@@ -157,6 +158,7 @@ def test_check_updates():
             ],
         },
     ]
+    flexmock(sentry).should_receive("configure_sentry").once()
     # projects are retrieved until there is a 'next' page
     (
         src_git_svc.should_receive("call_api")
@@ -204,7 +206,7 @@ def test_check_updates():
         (
             flexmock(Updater)
             .should_receive("_out_of_date_branches")
-            .with_args(project)
+            .with_args(project, None)
             .and_return([] if project != "rsync" else [("c8s", "commit_hash")])
         )
     # tasks are only created for out-of-date projects
