@@ -4,7 +4,7 @@
 This module covers integration between external entities
 and emulates functionality... just kidding, it's just constants.
 """
-from typing import Iterable, Dict, Any
+from typing import Iterable, Dict, Any, Tuple
 
 # These packages have complex %prep's which cannot be turned
 # into a proper source-git repo - hence we just run the %prep
@@ -111,3 +111,55 @@ HOOKS: Dict[str, Dict[str, Any]] = {
         )
     },
 }
+
+# These packages/branches are known to be failing when updated.
+# Skip updating them until the reason is figured out.
+IGNORED_PACKAGES: Iterable[Tuple[str, str]] = [
+    ("boost", "c8s"),
+    ("boost", "c8"),
+    ("cockpit", "c8s"),
+    ("cockpit-appstream", "c8s"),
+    ("docbook-dtds", "c8"),
+    ("gcc", "c8"),
+    ("gcc", "c8s"),
+    ("google-noto-cjk-fonts", "c8s"),
+    ("google-noto-cjk-fonts", "c8"),
+    ("google-noto-fonts", "c8"),
+    ("google-noto-fonts", "c8s"),
+    ("grafana-pcp", "c8"),
+    ("grafana-pcp", "c8s"),
+    ("kernel", "c8s"),
+    ("kernel", "c8"),
+    ("libabigail", "c8"),
+    ("libbpf", "c8"),
+    ("libbpf", "c8s"),
+    ("libidn2", "c8"),
+    ("libkkc-data", "c8"),
+    ("mcelog", "c8s"),
+    ("mingw-binutils", "c8s"),
+    ("mingw-binutils", "c8"),
+    ("mingw-gcc", "c8"),
+    ("mozjs60", "c8s"),
+    ("mozjs60", "c8"),
+    ("nss", "c8"),
+    ("nss", "c8s"),
+    ("pcp", "c8"),
+    ("pcp", "c8s"),
+    ("pcs", "c8"),
+    ("pcs", "c8s"),
+    ("perl-MIME-Types", "c8s"),
+    ("perl-Module-Install-AuthorTests", "c8"),
+    ("python-sphinx", "c8"),
+    ("rsyslog", "c8"),
+    ("rsyslog", "c8s"),
+    ("rubygem-kramdown", "c8"),
+    ("sassc", "c8"),
+    ("tesseract", "c8"),
+    ("trousers", "c8s"),
+    ("trousers", "c8"),
+    ("valgrind", "c8"),
+    ("virtio-win", "c8s"),
+    ("virtio-win", "c8"),
+    ("wireshark", "c8"),
+    ("wireshark", "c8s"),
+]

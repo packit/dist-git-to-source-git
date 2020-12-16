@@ -9,6 +9,7 @@ from typing import Optional
 import git
 from ogr.services.pagure import PagureProject
 
+from dist2src.constants import IGNORED_PACKAGES
 from dist2src.core import Dist2Src
 from dist2src.worker.monitoring import Pushgateway
 from dist2src.worker.config import Configuration
@@ -38,6 +39,15 @@ class Processor:
         self.src_git_dir = self.cfg.workdir / self.cfg.src_git_namespace / self.name
 
         logger.info(f"Processing message with {event}")
+        # Should this package and branch be ignored?
+        if (self.name, self.branch) in IGNORED_PACKAGES:
+            logger.info(
+                f"Ignore update event for {self.fullname}. "
+                f"{self.name!r}, branch {self.branch!r} is configured to be ignored."
+            )
+            Pushgateway().push_received_message(ignored=True)
+            return
+
         # Is this a repository in the rpms namespace?
         if not self.fullname.startswith(self.cfg.dist_git_namespace):
             logger.info(
