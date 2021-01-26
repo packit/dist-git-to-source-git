@@ -204,6 +204,11 @@ class GitRepo:
         # clear the working-tree
         self.repo.git.reset("HEAD", hard=True)
         self.clean()  # `reset --hard HEAD` is not enough to clean untracked files
+        # EOL normalization can still leave the repo in a dirty state.
+        # Make sure these changes are part of the revert commit.
+        if self.repo.is_dirty():
+            self.repo.git.add("--renormalize", ".")
+            self.repo.git.commit("--amend", "--no-edit")
 
     def clean(self):
         """
