@@ -1,7 +1,7 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
 
-.PHONY: usage convert clean check-in-container
+.PHONY: usage convert clean build run check check-in-container deploy check-deployment
 
 PACKAGE ?= rpm
 BRANCH ?= c8s
