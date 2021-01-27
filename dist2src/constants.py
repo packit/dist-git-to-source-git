@@ -126,6 +126,8 @@ IGNORED_PACKAGES: Iterable[Tuple[str, str]] = [
     ("google-noto-cjk-fonts", "c8"),
     ("google-noto-fonts", "c8"),
     ("google-noto-fonts", "c8s"),
+    # https://github.com/packit/dist-git-to-source-git/issues/164
+    ("go-srpm-macros", "c8s"),
     ("grafana-pcp", "c8"),
     ("grafana-pcp", "c8s"),
     ("kernel", "c8s"),
@@ -154,6 +156,8 @@ IGNORED_PACKAGES: Iterable[Tuple[str, str]] = [
     ("rsyslog", "c8s"),
     ("rubygem-kramdown", "c8"),
     ("sassc", "c8"),
+    # https://github.com/packit/dist-git-to-source-git/issues/163
+    ("smc-tools", "c8s"),
     ("tesseract", "c8"),
     ("trousers", "c8s"),
     ("trousers", "c8"),
