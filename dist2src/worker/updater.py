@@ -8,6 +8,7 @@ from logging import getLogger
 from typing import List, Optional, Tuple
 from ogr.services.pagure import PagureProject
 from ogr.exceptions import OgrException
+from requests.exceptions import RetryError
 
 from dist2src.worker import singular_fork, plural_fork
 from dist2src.worker import sentry
@@ -77,7 +78,7 @@ class Updater:
             for src_git_project in r["projects"]:
                 try:
                     self._check_project(src_git_project["name"], branch)
-                except OgrException:
+                except (OgrException, RetryError):
                     logger.exception(
                         f"Failed checking project {src_git_project['name']!r}"
                     )
