@@ -12,7 +12,7 @@
     - name: Install pip deps
       pip:
         name:
-          - sentry-sdk==0.19.1
+          - sentry-sdk==0.19.5
         executable: pip3
     - name: Check if all pip packages have all dependencies installed
       command: pip3 check
