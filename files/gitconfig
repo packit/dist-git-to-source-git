@@ -5,5 +5,3 @@
     default = current
 [merge]
     renames = false
-[core]
-    autocrlf = input
