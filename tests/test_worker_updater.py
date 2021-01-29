@@ -215,5 +215,9 @@ def test_check_updates():
     ).once()
     # source-git repos without a dist-git counterpart are monitored
     flexmock(Pushgateway).should_receive("push_found_missing_dist_git_repo").once()
+    # finishing the check-update process is monitored
+    flexmock(Pushgateway).should_receive(
+        "push_dist2src_finished_checking_updates"
+    ).once()
 
     Updater(configuration=config).check_updates()

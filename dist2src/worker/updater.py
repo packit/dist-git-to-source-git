@@ -83,6 +83,7 @@ class Updater:
                         f"Failed checking project {src_git_project['name']!r}"
                     )
                     continue
+        Pushgateway().push_dist2src_finished_checking_updates()
 
     def _check_project(self, project: str, branch: Optional[str] = None):
         logger.debug(f"Checking project {project!r}...")
