@@ -1,5 +1,5 @@
 ---
-- name: Install dependencies for dist2src.
+- name: Install dependencies for dist2src
   hosts: all
   tasks:
     - name: Install as many (setup.cfg) deps from RPM as possible
@@ -45,6 +45,8 @@
           - xmlto
           # kernel needs pathfix.py
           - python3-devel
+          # pandoc
+          - ghc-rpm-macros
         state: latest
     - name: Install gtk-doc
       shell: dnf --enablerepo=powertools --setopt=powertools.module_hotfixes=true install -y javapackages-local gtk-doc
