@@ -43,6 +43,12 @@ class Pushgateway:
             registry=self.registry,
         )
 
+        self.dist2src_finished_checking_updates = Counter(
+            "dist2src_finished_checking_updates",
+            "Number of times check_updates finished checking all source-git repos.",
+            registry=self.registry,
+        )
+
     def push(self):
         """
         Push collected metrics to Pushgateway
@@ -99,4 +105,13 @@ class Pushgateway:
         :return:
         """
         self.abandoned_updates.inc()
+        self.push()
+
+    def push_dist2src_finished_checking_updates(self):
+        """
+        Increment the counter and push it when dist2src finished checking
+        updates for all source-git repositories in the namespace
+        :return:
+        """
+        self.dist2src_finished_checking_updates.inc()
         self.push()
