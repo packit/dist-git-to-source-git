@@ -15,6 +15,7 @@ from dist2src.worker.monitoring import Pushgateway
 from dist2src.worker.config import Configuration
 from dist2src.worker import logging as worker_logging
 from dist2src.worker import singular_fork
+from dist2src.worker import sentry
 
 logger = getLogger(__name__)
 
@@ -37,6 +38,8 @@ class Processor:
         self.end_commit = event["end_commit"]
         self.dist_git_dir = self.cfg.workdir / self.cfg.dist_git_namespace / self.name
         self.src_git_dir = self.cfg.workdir / self.cfg.src_git_namespace / self.name
+        sentry.set_tag("repo", self.fullname)
+        sentry.set_tag("branch", self.branch)
 
         logger.info(f"Processing message with {event}")
         # Should this package and branch be ignored?
