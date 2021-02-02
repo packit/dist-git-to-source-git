@@ -141,13 +141,21 @@ class Processor:
         )
         d2s.convert(self.branch, self.branch)
 
-        src_git_repo.git.tag(
-            "--annotate",
-            "--message",
-            f"Converted from commit {self.end_commit},\nfrom branch {self.branch}.",
-            conversion_tag,
-            src_git_repo.heads[self.branch].commit,
-        )
+        try:
+            src_git_repo.git.tag(
+                "--annotate",
+                "--message",
+                f"Converted from commit {self.end_commit},\nfrom branch {self.branch}.",
+                conversion_tag,
+                src_git_repo.heads[self.branch].commit,
+            )
+        except git.GitCommandError as ex:
+            if "already exists" in ex.stderr:
+                # It might happen that an another task already updated the repo.
+                # If this is the case, do nothing.
+                return
+            else:
+                raise
 
         # Push the result to source-git.
         # Update moves the upstream ref tag, we need --tags --force to move it in remote.
