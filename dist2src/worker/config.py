@@ -27,7 +27,6 @@ class Configuration:
         self._retries = Retry(
             total=5,
             backoff_factor=1,
-            status_forcelist=Retry.RETRY_AFTER_STATUS_CODES.union([404]),
         )
 
     @property
