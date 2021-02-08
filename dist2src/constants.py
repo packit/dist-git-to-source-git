@@ -145,6 +145,8 @@ IGNORED_PACKAGES: Iterable[Tuple[str, str]] = [
     ("mozjs60", "c8"),
     ("nss", "c8"),
     ("nss", "c8s"),
+    # https://github.com/packit/dist-git-to-source-git/issues/164
+    ("osinfo-db", "c8s"),
     ("pcp", "c8"),
     ("pcp", "c8s"),
     ("pcs", "c8"),
