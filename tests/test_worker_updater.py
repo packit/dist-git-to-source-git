@@ -53,7 +53,7 @@ def test_get_out_of_date_branches():
     src_git_project = flexmock()
     (
         src_git_svc.should_receive("get_project")
-        .with_args(namespace=config.src_git_namespace, repo="rsync")
+        .with_args(namespace=config.src_git_namespace, repo="rsync", username="packit")
         .and_return(src_git_project)
         .once()
     )
@@ -192,7 +192,9 @@ def test_check_updates():
     for project in ["acl", "rsync", "kernel", "systemd"]:
         (
             dist_git_svc.should_receive("get_project")
-            .with_args(namespace=config.dist_git_namespace, repo=project)
+            .with_args(
+                namespace=config.dist_git_namespace, repo=project, username="packit"
+            )
             .and_return(dist_git_projects[project])
         )
         (

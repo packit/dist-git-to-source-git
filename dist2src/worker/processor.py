@@ -72,7 +72,10 @@ class Processor:
 
         # Does this repository have a source-git equivalent?
         src_git_project = self.cfg.src_git_svc.get_project(
-            namespace=singular_fork(self.cfg.src_git_namespace), repo=self.name
+            namespace=singular_fork(self.cfg.src_git_namespace),
+            repo=self.name,
+            # Specify username in order to disable superfluous whoami API calls.
+            username="packit",
         )
         if not src_git_project.exists():
             logger.info(

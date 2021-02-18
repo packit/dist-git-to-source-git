@@ -84,7 +84,7 @@ def test_no_corresponding_source_git(caplog):
     (
         flexmock(PagureService)
         .should_receive("get_project")
-        .with_args(namespace="source-git", repo="acl")
+        .with_args(namespace="source-git", repo="acl", username="packit")
         .and_return(project)
     )
     project.should_receive("exists").and_return(False)
@@ -117,7 +117,7 @@ def test_already_up_to_date(caplog):
     (
         flexmock(PagureService)
         .should_receive("get_project")
-        .with_args(namespace="source-git", repo="acl")
+        .with_args(namespace="source-git", repo="acl", username="packit")
         .and_return(src_git_project)
     )
     src_git_project.should_receive("exists").and_return(True)
@@ -150,7 +150,7 @@ def test_conversion(caplog):
     (
         flexmock(PagureService)
         .should_receive("get_project")
-        .with_args(namespace="source-git", repo="acl")
+        .with_args(namespace="source-git", repo="acl", username="packit")
         .and_return(src_git_project)
     )
     src_git_project.should_receive("exists").and_return(True)

@@ -90,6 +90,8 @@ class Updater:
         dist_git_project = self.cfg.dist_git_svc.get_project(
             namespace=singular_fork(self.cfg.dist_git_namespace),
             repo=project,
+            # Specify username in order to disable superfluous whoami API calls.
+            username="packit",
         )
         if not dist_git_project.exists():
             logger.warning(
@@ -131,7 +133,10 @@ class Updater:
 
         # Get tags from source-git
         src_git_project = self.cfg.src_git_svc.get_project(
-            namespace=singular_fork(self.cfg.src_git_namespace), repo=project
+            namespace=singular_fork(self.cfg.src_git_namespace),
+            repo=project,
+            # Specify username in order to disable superfluous whoami API calls.
+            username="packit",
         )
         src_git_tags = set(tag.name for tag in src_git_project.get_tags())
         logger.debug(f"Current tags in source-git: {src_git_tags}")
