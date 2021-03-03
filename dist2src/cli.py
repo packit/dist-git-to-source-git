@@ -196,7 +196,9 @@ def add_packit_config(ctx, dest: str, branch: str):
     d2s = Dist2Src(
         dist_git_path=None, source_git_path=Path(dest), log_level=ctx.obj[VERBOSE_KEY]
     )
-    d2s.add_packit_config(upstream_ref=START_TAG_TEMPLATE.format(branch=branch))
+    d2s.add_packit_config(
+        upstream_ref=START_TAG_TEMPLATE.format(branch=branch), lookaside_branch=branch
+    )
 
 
 @cli.command("convert")

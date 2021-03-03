@@ -14,11 +14,12 @@ TEST_PROJECTS_WITH_BRANCHES = [
     # %autosetup -S git_am + needs https://koji.mbox.centos.org/koji/taginfo?tagID=342
     ("pacemaker", "c8s"),
     ("systemd", "c8s"),  # -S git_am
-    ("kernel", "c8s"),  # !!!
+    # ("kernel", "c8s"),  # horribly slow, a giant repo
     # (
     #    "qemu-kvm",
     #    "c8s-stream-rhel",
     # ),  # %setup -q -n qemu-%{version} + %autopatch -p1
+    #     # probably even slower than kernel
     # (
     #    "libvirt",
     #    "c8s-stream-rhel",

@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+import requests
 
 from dist2src.core import Dist2Src
 from tests.conftest import clone_package, run_dist2src
@@ -150,3 +151,31 @@ def test_no_backup(tmp_path: Path):
     assert b.is_dir()
     assert b.joinpath("lsvmbus").is_file()
     assert not b.joinpath("lsvmbus.lsvmbus_python3").exists()
+
+
+@pytest.mark.parametrize(
+    "package,branch",
+    (
+        ("acl", "c8"),
+        ("meanwhile", "c8s"),
+    ),
+)
+def test_get_lookaside_sources(tmp_path: Path, package, branch):
+    d = tmp_path / "d"
+    s = tmp_path / "s"
+    d.mkdir()
+    s.mkdir()
+    dist_git_path = d / package
+    source_git_path = s / package
+    clone_package(package, str(dist_git_path), branch=branch)
+
+    d2s = Dist2Src(dist_git_path=dist_git_path, source_git_path=source_git_path)
+    sources = d2s.get_lookaside_sources(branch)
+    d2s.copy_all_sources()
+
+    (source_git_path / "SPECS").mkdir(exist_ok=True)
+    for source_dict in sources:
+        response = requests.get(source_dict["url"])
+        # make sure we haven't copied sources which are in lookaside
+        assert not Path(source_dict["path"]).exists()
+        source_git_path.joinpath(source_dict["path"]).write_bytes(response.content)

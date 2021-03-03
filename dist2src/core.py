@@ -7,15 +7,16 @@ import os
 import re
 import shutil
 import subprocess
+from functools import lru_cache
 from pathlib import Path
-from typing import List, Optional, Union, Set
+from typing import List, Optional, Union, Set, Dict
 
 import git
 import sh
 from git import GitCommandError
+from packit.config import get_local_package_config
 from packit.patches import PatchMetadata
 from packit.specfile import Specfile
-from packit.config import get_local_package_config
 from yaml import dump
 
 from dist2src.constants import (
@@ -230,6 +231,13 @@ class GitRepo:
         package_config = get_local_package_config(self.repo.working_dir)
         return package_config.upstream_ref
 
+    def is_file_tracked(self, path: str) -> bool:
+        try:
+            self.repo.git.ls_files("--error-unmatch", path)
+        except GitCommandError:
+            return False
+        return True
+
 
 class Dist2Src:
     """
@@ -270,6 +278,30 @@ class Dist2Src:
             sources_dir=self.dist_git_path / "SOURCES/",
         )
         return self._dist_git_spec
+
+    # This method would run only once during the lifetime of the Dist2Src object and
+    # return the cached return value for subsequent calls to save compute
+    # since the file will not change.
+    @lru_cache()
+    def lookaside_sources(self) -> Dict[str, str]:
+        """
+        read .{package_name}.metadata and return a `Dict[path: sha]`
+        with hash of the source and the target path
+
+        @return: {path1: sha1, path2: sha3}
+        """
+        metadata_file_content = next(self.dist_git_path.glob(".*.metadata")).read_text()
+        source_lines = metadata_file_content.strip().split("\n")
+        sources: Dict[str, str] = {}
+        for source_line in source_lines:
+            if not source_line:
+                # the metadata file can actually be empty for packages which don't have sources
+                #   e.g. hyperv-daemons, python-rpm-generators
+                continue
+            sha, path = source_line.split(" ")
+            sources[path] = sha
+        # making sure the dict is unique and methods can't mutate it b/w each other
+        return sources.copy()
 
     @property
     def BUILD_repo_path(self) -> Path:
@@ -470,7 +502,11 @@ class Dist2Src:
         )
 
         # configure packit
-        self.add_packit_config(upstream_ref=source_git_tag, commit=True)
+        self.add_packit_config(
+            upstream_ref=source_git_tag,
+            lookaside_branch=origin_branch,
+            commit=True,
+        )
         self.copy_spec()
         self.source_git.stage(add="SPECS")
         self.source_git.commit(message="Add spec-file for the distribution")
@@ -552,7 +588,11 @@ class Dist2Src:
 
         # configure packit
         source_git_tag = START_TAG_TEMPLATE.format(branch=dest_branch)
-        self.add_packit_config(upstream_ref=source_git_tag, commit=False)
+        self.add_packit_config(
+            upstream_ref=source_git_tag,
+            lookaside_branch=origin_branch,
+            commit=False,
+        )
         self.copy_spec()
         self.copy_all_sources(with_patches=True)
         self.source_git.stage(add=".")
@@ -573,9 +613,33 @@ class Dist2Src:
         # mark the last upstream commit
         self.source_git.create_tag(tag=source_git_tag, branch=dest_branch)
 
-    def add_packit_config(self, upstream_ref: str, commit: bool = False):
+    def get_lookaside_sources(self, branch: str) -> List[Dict[str, str]]:
+        """
+        Return "sources" which are meant to be set in packit.yaml so that
+        packit can fetch them from the lookaside
+        cache instead of committing them to source-git
+
+        @param branch: pick up a lookaside sources from this branch (e.g. c8 or c8s)
+        """
+        sources: List[Dict[str, str]] = []
+        for path, sha in self.lookaside_sources().items():
+            url = f"https://git.centos.org/sources/{self.package_name}/{branch}/{sha}"
+            logger.debug(f"add source {url} -> {path!r}")
+            # packit is too smart, it already expects the archive to be in SPECS
+            # so we just strip the leading SOURCES dir
+            path = path.replace("SOURCES/", "")
+            sources.append({"url": url, "path": path})
+        return sources
+
+    def add_packit_config(
+        self, upstream_ref: str, lookaside_branch: str, commit: bool = False
+    ):
         """
         Add packit config to the source-git repo.
+
+        @param upstream_ref: source-git history starts from this git-ref
+        @param lookaside_branch: pick up a lookaside sources from this branch (e.g. c8 or c8s)
+        @param commit: if True, commit the file
         """
         logger.info("Placing .packit.yaml to the source-git repo and committing it.")
         config = {
@@ -595,7 +659,9 @@ class Dist2Src:
                     "metadata": {"targets": TARGETS},
                 },
             ],
+            "sources": self.get_lookaside_sources(lookaside_branch),
         }
+
         self.source_git_path.joinpath(".packit.yaml").write_text(dump(config))
         if commit:
             self.source_git.stage(add=".packit.yaml")
@@ -611,11 +677,24 @@ class Dist2Src:
         sg_path = self.source_git_path / "SPECS"
         logger.info(f"Copy all sources from {dg_path} to {sg_path}.")
 
-        sources = self.dist_git_spec.get_sources()[:]
+        sources: List[str] = self.dist_git_spec.get_sources()[:]
+        lookaside_source_paths = self.lookaside_sources().keys()
         if with_patches:
             sources += (x.path for x in self.dist_git_spec.get_patches())
 
         for source in sources:
+            # sources are absolute paths as str, lookaside_paths are relative within the repo
+            relative = Path(source).relative_to(self.dist_git_path)
+            if str(relative) in lookaside_source_paths:
+                if self.dist_git.is_file_tracked(str(relative)):
+                    raise RuntimeError(
+                        f"File {relative} is stored in the lookaside cache and in git"
+                        ", which one should we use?"
+                    )
+                logger.debug(
+                    f"Source {source} will be fetched from lookaside cache, skipping."
+                )
+                continue
             source_dest = sg_path / Path(source).name
             logger.debug(f"copying {source} to {source_dest}")
             shutil.copy2(source, source_dest)
