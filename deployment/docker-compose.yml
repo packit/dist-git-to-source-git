@@ -53,7 +53,7 @@ services:
 
   centosmsg:
     container_name: centosmsg
-    image: docker.io/usercont/packit-service-centosmsg:prod
+    image: quay.io/packit/packit-service-centosmsg:prod
     depends_on:
       - redis
     environment:
