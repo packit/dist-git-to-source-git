@@ -28,3 +28,4 @@
       - files/zuul-generate-secrets.yml
       - files/zuul-deploy.yml
     run: files/zuul-check.yml
+    timeout: 3600 # 60 minutes

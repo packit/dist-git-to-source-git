@@ -11,22 +11,9 @@
           - python3-redis
           - python3-lazy-object-proxy
           - python3-timeout-decorator
+          - packit
         state: latest
-    - name: Install ogr & packitos deps as RPMs
-      dnf:
-        name:
-          - python3-bodhi-client
-          - python3-cccolutils
-          - python3-copr
-          - python3-gitlab
-          - python3-gnupg
-          - python3-jwt
-          - python3-marshmallow-enum
-          - python3-pam
-          - python3-sh
-          - python3-tabulate
-          - python3-wrapt
-        state: latest
+        enablerepo: powertools
     - name: Install tools required by %prep section of some packages
       dnf:
         name:
@@ -52,15 +39,9 @@
       shell: dnf --enablerepo=powertools --setopt=powertools.module_hotfixes=true install -y javapackages-local gtk-doc
       args:
         warn: no
-    - name: Install python3-ipython to speed up ipdb install
-      dnf:
-        name:
-          - python3-ipython
-        state: latest
     - name: Pip install tools for debugging, tests
       pip:
         name:
-          - ipdb
           - pytest
           - flexmock
         executable: pip3
