@@ -17,7 +17,7 @@ from git import GitCommandError
 from packit.config import get_local_package_config
 from packit.patches import PatchMetadata
 from packit.specfile import Specfile
-from yaml import dump
+import yaml
 
 from dist2src.constants import (
     AFTER_PREP_HOOK,
@@ -29,6 +29,14 @@ from dist2src.constants import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# https://stackoverflow.com/questions/13518819/avoid-references-in-pyyaml
+# mypy hated the suggestion from the SA ^, hence an override like this
+class SafeDumperWithoutAliases(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        # no aliases/anchors in the dumped yaml text
+        return True
 
 
 def get_hook(package_name: str, hook_name: str) -> Optional[str]:
@@ -662,7 +670,21 @@ class Dist2Src:
             "sources": self.get_lookaside_sources(lookaside_branch),
         }
 
-        self.source_git_path.joinpath(".packit.yaml").write_text(dump(config))
+        self.source_git_path.joinpath(".packit.yaml").write_text(
+            yaml.dump_all(
+                [config],
+                Dumper=SafeDumperWithoutAliases,
+                # default_flow_style=False dumps things into a block instead of ugly inline
+                # inline example:
+                #   key: {key1: value1, key2: value2}
+                # block example:
+                #   key:
+                #     key1: value1
+                #     key2: value1
+                # True in el8, False in the latest pyyaml
+                default_flow_style=False,
+            )
+        )
         if commit:
             self.source_git.stage(add=".packit.yaml")
             self.source_git.commit(message=".packit.yaml")

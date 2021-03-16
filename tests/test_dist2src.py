@@ -179,3 +179,35 @@ def test_get_lookaside_sources(tmp_path: Path, package, branch):
         # make sure we haven't copied sources which are in lookaside
         assert not Path(source_dict["path"]).exists()
         source_git_path.joinpath(source_dict["path"]).write_bytes(response.content)
+
+
+def test_packit_yaml_is_correct(tmp_path: Path):
+    d = tmp_path / "d"
+    s = tmp_path / "s"
+    d.mkdir()
+    subprocess.check_call(["git", "init", "."], cwd=d)
+    s.mkdir()
+    subprocess.check_call(["git", "init", "."], cwd=s)
+    (d / ".pkg.metadata").write_text("123456 SOURCES/archive.tar.gz\n")
+    d2s = Dist2Src(dist_git_path=d, source_git_path=s)
+    d2s.add_packit_config("U", "c8s", commit=False)
+
+    packit_yaml = s / ".packit.yaml"
+    assert packit_yaml.read_text() == (
+        "jobs:\n"
+        "- job: copr_build\n"
+        "  metadata:\n"
+        "    targets:\n"
+        "    - centos-stream-8-x86_64\n"
+        "  trigger: pull_request\n"
+        "- job: tests\n"
+        "  metadata:\n"
+        "    targets:\n"
+        "    - centos-stream-8-x86_64\n"
+        "  trigger: pull_request\n"
+        "sources:\n"
+        "- path: archive.tar.gz\n"
+        "  url: https://git.centos.org/sources/d/c8s/123456\n"
+        "specfile_path: SPECS/d.spec\n"
+        "upstream_ref: U\n"
+    )
