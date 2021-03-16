@@ -1,7 +1,11 @@
 [user]
-    name = Packit Service
-    email = user-cont-team+packit-service@redhat.com
+    name = Packit Bot
+    email = centos-stream-packit@redhat.com
 [push]
     default = current
 [merge]
     renames = false
+[http]
+    # https://stackoverflow.com/questions/6842687/the-remote-end-hung-up-unexpectedly-while-git-cloning
+    # we are unable to clone kernel, hence the postBuffer thingy
+    postBuffer = 1048576000
