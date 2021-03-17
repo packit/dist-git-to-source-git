@@ -181,6 +181,35 @@ def test_get_lookaside_sources(tmp_path: Path, package, branch):
         source_git_path.joinpath(source_dict["path"]).write_bytes(response.content)
 
 
+def test_gitlab_ci_config_removed(tmp_path: Path):
+    package = "libssh"
+    d = tmp_path / "d"
+    s = tmp_path / "s"
+    d.mkdir()
+    s.mkdir()
+    dist_git_path = d / package
+    source_git_path = s / package
+    clone_package(package, str(dist_git_path), branch="c8s")
+    gitlab_config_name = ".gitlab-ci.yml"
+
+    d2s = Dist2Src(dist_git_path=dist_git_path, source_git_path=source_git_path)
+    d2s.fetch_archive()
+    # run %prep
+    d2s.run_prep(ensure_autosetup=False)
+
+    # make sure the the config file is present
+    assert d2s.BUILD_repo_path.joinpath(gitlab_config_name).exists()
+
+    # put %prep output to the source-git repo and commit it
+    d2s.move_prep_content()
+    d2s.source_git.stage(add=".")
+    d2s.source_git.commit(message="commit all")
+
+    # remove the config and verify it's not present
+    d2s.remove_gitlab_ci_config()
+    assert not d2s.source_git_path.joinpath(gitlab_config_name).exists()
+
+
 def test_packit_yaml_is_correct(tmp_path: Path):
     d = tmp_path / "d"
     s = tmp_path / "s"

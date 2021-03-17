@@ -140,12 +140,15 @@ class GitRepo:
         """
         self.repo.git.fetch(remote, refspec)
 
-    def stage(self, add=None, exclude=None):
+    def stage(self, add=None, rm=None, exclude=None):
         """ stage content in the repo (git add)"""
         if exclude:
             exclude = f":(exclude){exclude}"
             logger.debug(exclude)
-        self.repo.git.add(add or ".", "-f", exclude)
+        if rm:
+            self.repo.git.rm(rm, "-f", exclude)
+        else:
+            self.repo.git.add(add or ".", "-f", exclude)
 
     def create_tag(self, tag, branch):
         """Create a Git TAG at the tip of BRANCH"""
@@ -479,6 +482,26 @@ class Dist2Src:
         )
         self.source_git.fetch(self.BUILD_repo_path, f"+{source_branch}:{dest_branch}")
 
+    def remove_gitlab_ci_config(self):
+        """ remove config files for gitlab CI so it's not being triggered """
+        # luckily it's only a single file:
+        #   https://docs.gitlab.com/ee/ci/quick_start/#create-a-gitlab-ciyml-file
+        gitlab_config_name = ".gitlab-ci.yml"
+        gitlab_ci_path = self.source_git_path / gitlab_config_name
+        if gitlab_ci_path.is_file():
+            gitlab_ci_path.unlink()
+            try:
+                self.source_git.stage(rm=gitlab_config_name)
+            except GitCommandError as ex:
+                # e.g. kernel
+                logger.info(
+                    f"It seems that {gitlab_config_name} is not tracked by git: {ex}"
+                )
+            else:
+                self.source_git.commit(
+                    message="Remove GitLab CI config file\n\nignore: true"
+                )
+
     def perform_convert(
         self, origin_branch: str, dest_branch: str, source_git_tag: str
     ):
@@ -518,6 +541,8 @@ class Dist2Src:
         self.copy_spec()
         self.source_git.stage(add="SPECS")
         self.source_git.commit(message="Add spec-file for the distribution")
+
+        self.remove_gitlab_ci_config()
 
         self.copy_all_sources()
         self.copy_conditional_patches()
@@ -602,6 +627,7 @@ class Dist2Src:
             commit=False,
         )
         self.copy_spec()
+        self.remove_gitlab_ci_config()
         self.copy_all_sources(with_patches=True)
         self.source_git.stage(add=".")
 
