@@ -11,9 +11,15 @@
           - python3-redis
           - python3-lazy-object-proxy
           - python3-timeout-decorator
-          - packit
         state: latest
         enablerepo: powertools
+    - name: Install as many (setup.cfg) deps from RPM as possible
+      dnf:
+        name:
+          # drop this task once packit 0.27 hits stable
+          - packit
+        state: latest
+        enablerepo: powertools,epel-testing
     - name: Install tools required by %prep section of some packages
       dnf:
         name:
