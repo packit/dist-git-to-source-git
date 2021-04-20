@@ -11,6 +11,8 @@
           - python3-redis
           - python3-lazy-object-proxy
           - python3-timeout-decorator
+          # - python3-click  # we need click >= 7, there's v6.7 in centos8
+          - python3-sh
           - packit
         state: latest
         enablerepo: powertools
