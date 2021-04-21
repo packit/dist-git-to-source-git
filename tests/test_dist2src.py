@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 import requests
+from flexmock import flexmock
+from requests import Response
 
 from dist2src.core import Dist2Src
 from tests.conftest import clone_package, run_dist2src
@@ -218,6 +220,12 @@ def test_packit_yaml_is_correct(tmp_path: Path):
     s.mkdir()
     subprocess.check_call(["git", "init", "."], cwd=s)
     (d / ".pkg.metadata").write_text("123456 SOURCES/archive.tar.gz\n")
+
+    ok_response = Response()
+    ok_response.reason = ""
+    ok_response.status_code = 200
+    flexmock(requests).should_receive("head").and_return(ok_response)
+
     d2s = Dist2Src(dist_git_path=d, source_git_path=s)
     d2s.add_packit_config("U", "c8s", commit=False)
 

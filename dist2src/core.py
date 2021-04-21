@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import List, Optional, Union, Set, Dict
 
 import git
+import requests
 import sh
 from git import GitCommandError
 from packit.config import get_local_package_config
@@ -658,6 +659,16 @@ class Dist2Src:
         sources: List[Dict[str, str]] = []
         for path, sha in self.lookaside_sources().items():
             url = f"https://git.centos.org/sources/{self.package_name}/{branch}/{sha}"
+            response = requests.head(url)
+            if response.status_code == 404:
+                # so it's c8 then
+                # ltrace, wireshark and more have this problem
+                url = f"https://git.centos.org/sources/{self.package_name}/c8/{sha}"
+                response = requests.head(url)
+            if not response.ok:
+                raise RuntimeError(
+                    f"Source {url} does not exist - we can't locate the proper branch."
+                )
             logger.debug(f"add source {url} -> {path!r}")
             # packit is too smart, it already expects the archive to be in SPECS
             # so we just strip the leading SOURCES dir
