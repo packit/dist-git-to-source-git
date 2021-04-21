@@ -18,7 +18,7 @@ push_dev_images: false
 
 image_worker: quay.io/packit/dist2src:{{ deployment }}
 
-image_centosmsg: docker.io/usercont/packit-service-centosmsg:prod
+image_centosmsg: quay.io/packit/packit-service-centosmsg:prod
 
 # How many workers
 worker_replicas: 2
