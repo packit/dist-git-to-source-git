@@ -38,6 +38,8 @@
           - xmlto
           # kernel needs pathfix.py
           - python3-devel
+          # kernel needs openssl to generate Kconfigs
+          - openssl
           # pandoc
           - ghc-rpm-macros
         state: latest
