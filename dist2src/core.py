@@ -12,12 +12,13 @@ from pathlib import Path
 from typing import List, Optional, Union, Set, Dict
 
 import git
+import requests
 import sh
 from git import GitCommandError
 from packit.config import get_local_package_config
 from packit.patches import PatchMetadata
 from packit.specfile import Specfile
-from yaml import dump
+import yaml
 
 from dist2src.constants import (
     AFTER_PREP_HOOK,
@@ -29,6 +30,14 @@ from dist2src.constants import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# https://stackoverflow.com/questions/13518819/avoid-references-in-pyyaml
+# mypy hated the suggestion from the SA ^, hence an override like this
+class SafeDumperWithoutAliases(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        # no aliases/anchors in the dumped yaml text
+        return True
 
 
 def get_hook(package_name: str, hook_name: str) -> Optional[str]:
@@ -132,12 +141,15 @@ class GitRepo:
         """
         self.repo.git.fetch(remote, refspec)
 
-    def stage(self, add=None, exclude=None):
+    def stage(self, add=None, rm=None, exclude=None):
         """ stage content in the repo (git add)"""
         if exclude:
             exclude = f":(exclude){exclude}"
             logger.debug(exclude)
-        self.repo.git.add(add or ".", "-f", exclude)
+        if rm:
+            self.repo.git.rm(rm, "-f", exclude)
+        else:
+            self.repo.git.add(add or ".", "-f", exclude)
 
     def create_tag(self, tag, branch):
         """Create a Git TAG at the tip of BRANCH"""
@@ -471,6 +483,26 @@ class Dist2Src:
         )
         self.source_git.fetch(self.BUILD_repo_path, f"+{source_branch}:{dest_branch}")
 
+    def remove_gitlab_ci_config(self):
+        """ remove config files for gitlab CI so it's not being triggered """
+        # luckily it's only a single file:
+        #   https://docs.gitlab.com/ee/ci/quick_start/#create-a-gitlab-ciyml-file
+        gitlab_config_name = ".gitlab-ci.yml"
+        gitlab_ci_path = self.source_git_path / gitlab_config_name
+        if gitlab_ci_path.is_file():
+            gitlab_ci_path.unlink()
+            try:
+                self.source_git.stage(rm=gitlab_config_name)
+            except GitCommandError as ex:
+                # e.g. kernel
+                logger.info(
+                    f"It seems that {gitlab_config_name} is not tracked by git: {ex}"
+                )
+            else:
+                self.source_git.commit(
+                    message="Remove GitLab CI config file\n\nignore: true"
+                )
+
     def perform_convert(
         self, origin_branch: str, dest_branch: str, source_git_tag: str
     ):
@@ -510,6 +542,8 @@ class Dist2Src:
         self.copy_spec()
         self.source_git.stage(add="SPECS")
         self.source_git.commit(message="Add spec-file for the distribution")
+
+        self.remove_gitlab_ci_config()
 
         self.copy_all_sources()
         self.copy_conditional_patches()
@@ -594,6 +628,7 @@ class Dist2Src:
             commit=False,
         )
         self.copy_spec()
+        self.remove_gitlab_ci_config()
         self.copy_all_sources(with_patches=True)
         self.source_git.stage(add=".")
 
@@ -624,6 +659,16 @@ class Dist2Src:
         sources: List[Dict[str, str]] = []
         for path, sha in self.lookaside_sources().items():
             url = f"https://git.centos.org/sources/{self.package_name}/{branch}/{sha}"
+            response = requests.head(url)
+            if response.status_code == 404:
+                # so it's c8 then
+                # ltrace, wireshark and more have this problem
+                url = f"https://git.centos.org/sources/{self.package_name}/c8/{sha}"
+                response = requests.head(url)
+            if not response.ok:
+                raise RuntimeError(
+                    f"Source {url} does not exist - we can't locate the proper branch."
+                )
             logger.debug(f"add source {url} -> {path!r}")
             # packit is too smart, it already expects the archive to be in SPECS
             # so we just strip the leading SOURCES dir
@@ -662,7 +707,21 @@ class Dist2Src:
             "sources": self.get_lookaside_sources(lookaside_branch),
         }
 
-        self.source_git_path.joinpath(".packit.yaml").write_text(dump(config))
+        self.source_git_path.joinpath(".packit.yaml").write_text(
+            yaml.dump_all(
+                [config],
+                Dumper=SafeDumperWithoutAliases,
+                # default_flow_style=False dumps things into a block instead of ugly inline
+                # inline example:
+                #   key: {key1: value1, key2: value2}
+                # block example:
+                #   key:
+                #     key1: value1
+                #     key2: value1
+                # True in el8, False in the latest pyyaml
+                default_flow_style=False,
+            )
+        )
         if commit:
             self.source_git.stage(add=".packit.yaml")
             self.source_git.commit(message=".packit.yaml")
@@ -704,7 +763,7 @@ class Dist2Src:
         for patches which are applied in conditions
         and the condition is evaluated to false during conversion,
         we cannot create a SRPM because rpmbuild wants the patch files present
-        and obviously packit dones't know how to create those
+        and obviously packit doesn't know how to create those
 
         this method copies all patch files which are defined and are not in the patch metadata
         """

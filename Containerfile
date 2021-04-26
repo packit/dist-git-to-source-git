@@ -26,12 +26,6 @@ RUN $package_manager install epel-release \
     && ansible-playbook -vv -c local -i localhost, /src/install-deps-worker.yml \
     && $package_manager clean all
 
-# https://stackoverflow.com/questions/6842687/the-remote-end-hung-up-unexpectedly-while-git-cloning
-# we are unable to clone kernel, hence the postBuffer thingy
-RUN git config --system user.name "Packit" \
-    && git config --system user.email "packit" \
-    && git config --system http.postBuffer 1048576000
-
 COPY README.md setup.cfg setup.py files/gitconfig files/run_worker.sh /src/
 COPY dist2src /src/dist2src
 RUN ln -s -f /src/pyproject.toml /pyproject.toml

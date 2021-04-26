@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 import requests
+from flexmock import flexmock
+from requests import Response
 
 from dist2src.core import Dist2Src
 from tests.conftest import clone_package, run_dist2src
@@ -179,3 +181,70 @@ def test_get_lookaside_sources(tmp_path: Path, package, branch):
         # make sure we haven't copied sources which are in lookaside
         assert not Path(source_dict["path"]).exists()
         source_git_path.joinpath(source_dict["path"]).write_bytes(response.content)
+
+
+def test_gitlab_ci_config_removed(tmp_path: Path):
+    package = "libssh"
+    d = tmp_path / "d"
+    s = tmp_path / "s"
+    d.mkdir()
+    s.mkdir()
+    dist_git_path = d / package
+    source_git_path = s / package
+    clone_package(package, str(dist_git_path), branch="c8s")
+    gitlab_config_name = ".gitlab-ci.yml"
+
+    d2s = Dist2Src(dist_git_path=dist_git_path, source_git_path=source_git_path)
+    d2s.fetch_archive()
+    # run %prep
+    d2s.run_prep(ensure_autosetup=False)
+
+    # make sure the the config file is present
+    assert d2s.BUILD_repo_path.joinpath(gitlab_config_name).exists()
+
+    # put %prep output to the source-git repo and commit it
+    d2s.move_prep_content()
+    d2s.source_git.stage(add=".")
+    d2s.source_git.commit(message="commit all")
+
+    # remove the config and verify it's not present
+    d2s.remove_gitlab_ci_config()
+    assert not d2s.source_git_path.joinpath(gitlab_config_name).exists()
+
+
+def test_packit_yaml_is_correct(tmp_path: Path):
+    d = tmp_path / "d"
+    s = tmp_path / "s"
+    d.mkdir()
+    subprocess.check_call(["git", "init", "."], cwd=d)
+    s.mkdir()
+    subprocess.check_call(["git", "init", "."], cwd=s)
+    (d / ".pkg.metadata").write_text("123456 SOURCES/archive.tar.gz\n")
+
+    ok_response = Response()
+    ok_response.reason = ""
+    ok_response.status_code = 200
+    flexmock(requests).should_receive("head").and_return(ok_response)
+
+    d2s = Dist2Src(dist_git_path=d, source_git_path=s)
+    d2s.add_packit_config("U", "c8s", commit=False)
+
+    packit_yaml = s / ".packit.yaml"
+    assert packit_yaml.read_text() == (
+        "jobs:\n"
+        "- job: copr_build\n"
+        "  metadata:\n"
+        "    targets:\n"
+        "    - centos-stream-8-x86_64\n"
+        "  trigger: pull_request\n"
+        "- job: tests\n"
+        "  metadata:\n"
+        "    targets:\n"
+        "    - centos-stream-8-x86_64\n"
+        "  trigger: pull_request\n"
+        "sources:\n"
+        "- path: archive.tar.gz\n"
+        "  url: https://git.centos.org/sources/d/c8s/123456\n"
+        "specfile_path: SPECS/d.spec\n"
+        "upstream_ref: U\n"
+    )
