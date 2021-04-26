@@ -7,15 +7,14 @@ from pathlib import Path
 from typing import Optional
 
 import git
-from ogr.services.pagure import PagureProject
+from ogr.services.gitlab import GitlabProject
 
 from dist2src.constants import IGNORED_PACKAGES
 from dist2src.core import Dist2Src
-from dist2src.worker.monitoring import Pushgateway
-from dist2src.worker.config import Configuration
 from dist2src.worker import logging as worker_logging
-from dist2src.worker import singular_fork
 from dist2src.worker import sentry
+from dist2src.worker.config import Configuration
+from dist2src.worker.monitoring import Pushgateway
 
 logger = getLogger(__name__)
 
@@ -72,10 +71,8 @@ class Processor:
 
         # Does this repository have a source-git equivalent?
         src_git_project = self.cfg.src_git_svc.get_project(
-            namespace=singular_fork(self.cfg.src_git_namespace),
+            namespace=self.cfg.src_git_namespace,
             repo=self.name,
-            # Specify username in order to disable superfluous whoami API calls.
-            username="packit",
         )
         if not src_git_project.exists():
             logger.info(
@@ -106,7 +103,7 @@ class Processor:
             getLogger("dist2src").removeHandler(file_handler)
             self.cleanup()
 
-    def update_project(self, project: PagureProject, conversion_tag: str):
+    def update_project(self, project: GitlabProject, conversion_tag: str):
         self.cleanup()
         # Clone repo from rpms/ and checkout the branch.
         dist_git_repo = git.Repo.clone_from(

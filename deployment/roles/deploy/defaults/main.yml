@@ -42,19 +42,20 @@ workdir: /workdir
 # For now, the forge is expected to be running Pagure.
 # The corresponding tokens are expected to be stored in the secrets dir.
 dist_git_host: git.centos.org
-src_git_host: git.centos.org
+src_git_host: gitlab.com
 
 # Dist-git branches which should be monitored for changes
 branches_watched:
   - c8s
-  - c8
-  - c8s-stream-rhel
+  # in the first iteration, we only want to take care of c8s
+  # - c8
+  # - c8s-stream-rhel
 
 # Namespace where the dist-git repositories are stored in the forge
 dist_git_namespace: rpms
 
 # Namespace where the source-git repositories are stored in the forge
-src_git_namespace: source-git
+src_git_namespace: redhat/centos-stream/src
 
 mqtt_host: mqtt.git.centos.org
 mqtt_topics: git.centos.org/#

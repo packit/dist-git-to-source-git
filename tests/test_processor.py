@@ -1,19 +1,20 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
 
-import os
 import logging
+import os
 import shutil
-import git
-
-from flexmock import flexmock
 from pathlib import Path
-from ogr import PagureService
-from dist2src.worker.processor import Processor
-from dist2src.worker.monitoring import Pushgateway
-from dist2src.worker import processor
+
+import git
+from flexmock import flexmock
+from ogr.services.gitlab.service import GitlabService
+
 from dist2src.core import Dist2Src
 from dist2src.worker import logging as worker_logging
+from dist2src.worker import processor
+from dist2src.worker.monitoring import Pushgateway
+from dist2src.worker.processor import Processor
 
 
 def test_event_not_for_dist_git_namespace(caplog):
@@ -82,9 +83,9 @@ def test_no_corresponding_source_git(caplog):
     """
     project = flexmock()
     (
-        flexmock(PagureService)
+        flexmock(GitlabService)
         .should_receive("get_project")
-        .with_args(namespace="source-git", repo="acl", username="packit")
+        .with_args(namespace="redhat/centos-stream/src", repo="acl")
         .and_return(project)
     )
     project.should_receive("exists").and_return(False)
@@ -106,18 +107,19 @@ def test_no_corresponding_source_git(caplog):
 
 def test_already_up_to_date(caplog):
     """
-    When there are identical import tags at the top of the branches in dist-git and source-git,
-    the source-git repo is considered up to date and no conversion takes place.
+    When there are identical import tags at the top of the branches in dist-git
+    and a source-git repo, the source-git repo is considered up to date and
+    no conversion takes place.
     """
     src_git_project = flexmock(
         service=flexmock(api_url="https://url/api/0/"),
-        namespace="source-git",
+        namespace="redhat/centos-stream/src",
         repo="acl",
     )
     (
-        flexmock(PagureService)
+        flexmock(GitlabService)
         .should_receive("get_project")
-        .with_args(namespace="source-git", repo="acl", username="packit")
+        .with_args(namespace="redhat/centos-stream/src", repo="acl")
         .and_return(src_git_project)
     )
     src_git_project.should_receive("exists").and_return(True)
@@ -137,20 +139,20 @@ def test_already_up_to_date(caplog):
         assert "The source-git repo is already up to date" in caplog.text
 
 
-def test_conversion(caplog):
+def test_conversion():
     """
     When the branch and repository needs to be updated, conversion is triggered.
     """
     # Source-git project exists.
     src_git_project = flexmock(
         service=flexmock(api_url="https://url/api/0/"),
-        namespace="source-git",
+        namespace="redhat/centos-stream/src",
         repo="acl",
     )
     (
-        flexmock(PagureService)
+        flexmock(GitlabService)
         .should_receive("get_project")
-        .with_args(namespace="source-git", repo="acl", username="packit")
+        .with_args(namespace="redhat/centos-stream/src", repo="acl")
         .and_return(src_git_project)
     )
     src_git_project.should_receive("exists").and_return(True)
@@ -174,7 +176,7 @@ def test_conversion(caplog):
 
     # Source-git repo is cloned and the branch is checked out.
     src_git_project.should_receive("get_git_urls").and_return(
-        {"ssh": "ssh://git@git.stg.centos.org"}
+        {"ssh": "ssh://git@gitlab.com/redhat/centos-stream/src/acl"}
     )
     src_git_repo = flexmock(
         git=flexmock(),
@@ -184,7 +186,10 @@ def test_conversion(caplog):
     (
         flexmock(git.Repo)
         .should_receive("clone_from")
-        .with_args("ssh://git@git.stg.centos.org", Path("/workdir/source-git/acl"))
+        .with_args(
+            "ssh://git@gitlab.com/redhat/centos-stream/src/acl",
+            Path("/workdir/redhat/centos-stream/src/acl"),
+        )
         .and_return(src_git_repo)
         .once()
         .ordered()
@@ -198,7 +203,7 @@ def test_conversion(caplog):
         .should_receive("Dist2Src")
         .with_args(
             dist_git_path=Path("/workdir/rpms/acl"),
-            source_git_path=Path("/workdir/source-git/acl"),
+            source_git_path=Path("/workdir/redhat/centos-stream/src/acl"),
         )
         .and_return(d2s)
     )
