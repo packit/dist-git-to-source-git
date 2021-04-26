@@ -763,7 +763,7 @@ class Dist2Src:
         for patches which are applied in conditions
         and the condition is evaluated to false during conversion,
         we cannot create a SRPM because rpmbuild wants the patch files present
-        and obviously packit dones't know how to create those
+        and obviously packit doesn't know how to create those
 
         this method copies all patch files which are defined and are not in the patch metadata
         """
