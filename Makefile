@@ -34,7 +34,7 @@ clean:
 	rm -rf $(DIR)/
 
 build:
-	$(CONTAINER_ENGINE) build -t $(IMAGE_NAME) -f Containerfile .
+	$(CONTAINER_ENGINE) build -t $(IMAGE_NAME) -f Containerfile --network host .
 
 run:
 	$(CONTAINER_ENGINE) run \
