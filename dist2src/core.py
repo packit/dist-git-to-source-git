@@ -41,7 +41,7 @@ class SafeDumperWithoutAliases(yaml.SafeDumper):
 
 
 def get_hook(package_name: str, hook_name: str) -> Optional[str]:
-    """ get a hook's command for particular source-git repo """
+    """get a hook's command for particular source-git repo"""
     return HOOKS.get(package_name, {}).get(hook_name, None)
 
 
@@ -142,7 +142,7 @@ class GitRepo:
         self.repo.git.fetch(remote, refspec)
 
     def stage(self, add=None, rm=None, exclude=None):
-        """ stage content in the repo (git add)"""
+        """stage content in the repo (git add)"""
         if exclude:
             exclude = f":(exclude){exclude}"
             logger.debug(exclude)
@@ -484,7 +484,7 @@ class Dist2Src:
         self.source_git.fetch(self.BUILD_repo_path, f"+{source_branch}:{dest_branch}")
 
     def remove_gitlab_ci_config(self):
-        """ remove config files for gitlab CI so it's not being triggered """
+        """remove config files for gitlab CI so it's not being triggered"""
         # luckily it's only a single file:
         #   https://docs.gitlab.com/ee/ci/quick_start/#create-a-gitlab-ciyml-file
         gitlab_config_name = ".gitlab-ci.yml"
@@ -506,7 +506,7 @@ class Dist2Src:
     def perform_convert(
         self, origin_branch: str, dest_branch: str, source_git_tag: str
     ):
-        """ Run all the steps to get a source-git repo from dist-git """
+        """Run all the steps to get a source-git repo from dist-git"""
         self.dist_git.checkout(branch=origin_branch)
         if self.source_git.repo.active_branch.name != dest_branch:
             if self.source_git.has_ref(dest_branch):

@@ -159,7 +159,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     ],
 )
 def test_update_source(tmp_path: Path, package_name, branch, old_version):
-    """ perform an update from a specific ref to the last commit """
+    """perform an update from a specific ref to the last commit"""
     dist_git_path = tmp_path / "d" / package_name
     sg_path = tmp_path / "s" / package_name
     dist_git_path.mkdir(parents=True)
