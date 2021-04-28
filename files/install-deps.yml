@@ -11,15 +11,11 @@
           - python3-redis
           - python3-lazy-object-proxy
           - python3-timeout-decorator
-        state: latest
-        enablerepo: powertools
-    - name: Install as many (setup.cfg) deps from RPM as possible
-      dnf:
-        name:
-          # drop this task once packit 0.27 hits stable
+          # - python3-click  # we need click >= 7, there's v6.7 in centos8
+          - python3-sh
           - packit
         state: latest
-        enablerepo: powertools,epel-testing
+        enablerepo: powertools
     - name: Install tools required by %prep section of some packages
       dnf:
         name:
