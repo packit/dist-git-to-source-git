@@ -19,6 +19,7 @@ class Configuration:
         self.src_git_namespace = os.getenv("D2S_SRC_GIT_NAMESPACE", "source-git")
         self.branches_watched = os.getenv("D2S_BRANCHES_WATCHED", "c8s,c8").split(",")
         self.update_task_expires = os.getenv("D2S_UPDATE_TASK_EXPIRES")
+        self.logs_dir = Path(os.getenv("D2S_LOGS_DIR", "/log-files/"))
         if self.update_task_expires is not None:
             self.update_task_expires = int(self.update_task_expires)
 

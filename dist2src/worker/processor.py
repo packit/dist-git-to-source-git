@@ -97,7 +97,7 @@ class Processor:
 
         Pushgateway().push_received_message(ignored=False)
         file_handler = worker_logging.set_logging_to_file(
-            repo_name=self.name, commit_sha=self.end_commit
+            repo_name=self.name, commit_sha=self.end_commit, logs_dir=self.cfg.logs_dir
         )
 
         try:
