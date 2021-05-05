@@ -17,6 +17,8 @@ else
   LOGLEVEL="DEBUG"
 fi
 
+source /src/setup_env_in_openshift.sh
+
 DEFAULT_DISTGIT_HOST="git.centos.org"
 D2S_DIST_GIT_HOST="${D2S_DIST_GIT_HOST:-$DEFAULT_DISTGIT_HOST}"
 DEFAULT_SRC_HOST="gitlab.com"
