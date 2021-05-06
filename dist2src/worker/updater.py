@@ -39,7 +39,7 @@ class Updater:
         Limit the checks to 'project' and 'branch', if the arguments are
         specified.
         """
-        logger.debug(f"Source-git API: {self.cfg.src_git_svc.instance_url!r}")
+        logger.debug(f"Source-git instance: {self.cfg.src_git_svc.instance_url!r}")
         logger.debug(f"Source-git namespace: {self.cfg.src_git_namespace!r}")
         logger.debug(f"Dist-git API: {self.cfg.dist_git_svc.api_url!r}")
         logger.debug(f"Dist-git namespace: {self.cfg.dist_git_namespace!r}")
@@ -62,12 +62,21 @@ class Updater:
             )
             self.check_and_update_project(gitlab_project, branch=branch)
         else:
-            for n in range(1, self.PROJECTS_PER_PAGE):
+            # iterate through all projects in the group: 9999 * 100
+            for n in range(1, 9999):
                 # Get repositories in source-git
-                projects = src_gitlab_group.projects.list(page=n, per_page=100)
+                projects = src_gitlab_group.projects.list(
+                    page=n, per_page=self.PROJECTS_PER_PAGE
+                )
                 if not projects:
                     break
                 for project_g in projects:
+                    # we need to explicitly get every project from the API because those returned
+                    # above are limited:
+                    #   GroupProject objects returned by this API call are very limited,
+                    #   and do not provide all the features of Project objects.
+                    #   If you need to manipulate projects, create a new Project object.
+                    # https://python-gitlab.readthedocs.io/en/latest/gl_objects/groups.html
                     gitlab_project = self.cfg.src_git_svc.get_project(
                         repo=project_g.name, namespace=self.cfg.src_git_namespace
                     )
@@ -86,13 +95,11 @@ class Updater:
             )
             Pushgateway().push_found_missing_dist_git_repo()
             return
-        branch_commits = self._get_out_of_date_branches(project, branch)
-        if branch_commits:
-            for branch, commit in branch_commits:
-                logger.info(
-                    f"Branch {branch!r} from project {project!r} needs to be updated."
-                )
-                self._create_task(dist_git_project, branch, commit)
+        for branch, commit in self._get_out_of_date_branches(project, branch):
+            logger.info(
+                f"Branch {branch!r} from project {project!r} needs to be updated."
+            )
+            self._create_task(dist_git_project, branch, commit)
 
     def _get_dist_git(self, project: GitlabProject) -> PagureProject:
         """get corresponding dist-git repo for a src repo"""
