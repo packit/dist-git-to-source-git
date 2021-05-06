@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: MIT
 
 import os
-
 from pathlib import Path
+
 from ogr import GitlabService, PagureService
 from requests.packages.urllib3.util import Retry
+
+from dist2src.constants import GITLAB_SRC_NAMESPACE
 
 
 class Configuration:
@@ -17,7 +19,7 @@ class Configuration:
         self.dist_git_token = os.getenv("D2S_DIST_GIT_TOKEN")
         self.dist_git_namespace = os.getenv("D2S_DIST_GIT_NAMESPACE", "rpms")
         self.src_git_namespace = os.getenv(
-            "D2S_SRC_GIT_NAMESPACE", "redhat/centos-stream/src"
+            "D2S_SRC_GIT_NAMESPACE", GITLAB_SRC_NAMESPACE
         )
         self.branches_watched = os.getenv("D2S_BRANCHES_WATCHED", "c8s,c8").split(",")
         self.update_task_expires = os.getenv("D2S_UPDATE_TASK_EXPIRES")

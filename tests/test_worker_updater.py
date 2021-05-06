@@ -5,10 +5,11 @@ import os
 
 from flexmock import flexmock
 
+from dist2src.constants import GITLAB_SRC_NAMESPACE
 from dist2src.worker import sentry
-from dist2src.worker.updater import Updater
-from dist2src.worker.monitoring import Pushgateway
 from dist2src.worker.celerizer import celery_app
+from dist2src.worker.monitoring import Pushgateway
+from dist2src.worker.updater import Updater
 
 
 def test_get_out_of_date_branches():
@@ -25,7 +26,7 @@ def test_get_out_of_date_branches():
         dist_git_svc=dist_git_svc,
         src_git_svc=src_git_svc,
         dist_git_namespace="rpms",
-        src_git_namespace="redhat/centos-stream/src",
+        src_git_namespace=GITLAB_SRC_NAMESPACE,
     )
     dist_git_branches = {
         "branches": {
@@ -126,7 +127,6 @@ def test_check_updates():
     Each project in the source-git namespace is checked whether is up to date.
     A Celery task is created for each out-of-date branch in these projects.
     """
-    src_git_namespace = "redhat/centos-stream/src"
     gitlab_groups = flexmock()
     gitlab_instance = flexmock(groups=gitlab_groups)
     src_git_svc = flexmock(
@@ -134,7 +134,7 @@ def test_check_updates():
     )
     dist_git_svc = flexmock(api_url="https://git.centos.org/api/0/")
     config = flexmock(
-        src_git_namespace=src_git_namespace,
+        src_git_namespace=GITLAB_SRC_NAMESPACE,
         src_git_svc=src_git_svc,
         dist_git_svc=dist_git_svc,
         dist_git_namespace="rpms",
@@ -158,16 +158,16 @@ def test_check_updates():
         []
     )
     src_git_svc.should_receive("get_project").with_args(
-        repo="acl", namespace=src_git_namespace
+        repo="acl", namespace=GITLAB_SRC_NAMESPACE
     ).and_return(flexmock(repo="acl"))
     src_git_svc.should_receive("get_project").with_args(
-        repo="rsync", namespace=src_git_namespace
+        repo="rsync", namespace=GITLAB_SRC_NAMESPACE
     ).and_return(src_project_rsync)
     src_git_svc.should_receive("get_project").with_args(
-        repo="kernel", namespace=src_git_namespace
+        repo="kernel", namespace=GITLAB_SRC_NAMESPACE
     ).and_return(flexmock(repo="kernel"))
     src_git_svc.should_receive("get_project").with_args(
-        repo="systemd", namespace=src_git_namespace
+        repo="systemd", namespace=GITLAB_SRC_NAMESPACE
     ).and_return(flexmock(repo="systemd"))
     flexmock(sentry).should_receive("configure_sentry").once()
     # projects are retrieved until there is a 'next' page

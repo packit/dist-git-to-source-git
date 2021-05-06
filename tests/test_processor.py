@@ -10,6 +10,7 @@ import git
 from flexmock import flexmock
 from ogr.services.gitlab.service import GitlabService
 
+from dist2src.constants import GITLAB_SRC_NAMESPACE
 from dist2src.core import Dist2Src
 from dist2src.worker import logging as worker_logging
 from dist2src.worker import processor
@@ -85,7 +86,7 @@ def test_no_corresponding_source_git(caplog):
     (
         flexmock(GitlabService)
         .should_receive("get_project")
-        .with_args(namespace="redhat/centos-stream/src", repo="acl")
+        .with_args(namespace=GITLAB_SRC_NAMESPACE, repo="acl")
         .and_return(project)
     )
     project.should_receive("exists").and_return(False)
@@ -113,13 +114,13 @@ def test_already_up_to_date(caplog):
     """
     src_git_project = flexmock(
         service=flexmock(api_url="https://url/api/0/"),
-        namespace="redhat/centos-stream/src",
+        namespace=GITLAB_SRC_NAMESPACE,
         repo="acl",
     )
     (
         flexmock(GitlabService)
         .should_receive("get_project")
-        .with_args(namespace="redhat/centos-stream/src", repo="acl")
+        .with_args(namespace=GITLAB_SRC_NAMESPACE, repo="acl")
         .and_return(src_git_project)
     )
     src_git_project.should_receive("exists").and_return(True)
@@ -146,13 +147,13 @@ def test_conversion():
     # Source-git project exists.
     src_git_project = flexmock(
         service=flexmock(api_url="https://url/api/0/"),
-        namespace="redhat/centos-stream/src",
+        namespace=GITLAB_SRC_NAMESPACE,
         repo="acl",
     )
     (
         flexmock(GitlabService)
         .should_receive("get_project")
-        .with_args(namespace="redhat/centos-stream/src", repo="acl")
+        .with_args(namespace=GITLAB_SRC_NAMESPACE, repo="acl")
         .and_return(src_git_project)
     )
     src_git_project.should_receive("exists").and_return(True)
