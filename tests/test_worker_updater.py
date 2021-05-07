@@ -5,10 +5,11 @@ import os
 
 from flexmock import flexmock
 
+from dist2src.constants import GITLAB_SRC_NAMESPACE
 from dist2src.worker import sentry
-from dist2src.worker.updater import Updater
-from dist2src.worker.monitoring import Pushgateway
 from dist2src.worker.celerizer import celery_app
+from dist2src.worker.monitoring import Pushgateway
+from dist2src.worker.updater import Updater
 
 
 def test_get_out_of_date_branches():
@@ -17,6 +18,7 @@ def test_get_out_of_date_branches():
     repository counterpart matching the hash of their HEAD,
     should be considered as the ones needing an update.
     """
+    project_name = "rsync"
     dist_git_svc = flexmock(api_url="https://git.centos.org/api/0/")
     src_git_svc = flexmock()
     config = flexmock(
@@ -24,7 +26,7 @@ def test_get_out_of_date_branches():
         dist_git_svc=dist_git_svc,
         src_git_svc=src_git_svc,
         dist_git_namespace="rpms",
-        src_git_namespace="source-git",
+        src_git_namespace=GITLAB_SRC_NAMESPACE,
     )
     dist_git_branches = {
         "branches": {
@@ -44,23 +46,20 @@ def test_get_out_of_date_branches():
     (
         dist_git_svc.should_receive("call_api")
         .with_args(
-            f"{dist_git_svc.api_url}{config.dist_git_namespace}/rsync/git/branches",
+            f"{dist_git_svc.api_url}{config.dist_git_namespace}/{project_name}/git/branches",
             params={"with_commits": True},
         )
         .and_return(dist_git_branches)
         .once()
     )
-    src_git_project = flexmock()
-    (
-        src_git_svc.should_receive("get_project")
-        .with_args(namespace=config.src_git_namespace, repo="rsync", username="packit")
-        .and_return(src_git_project)
-        .once()
-    )
+    src_git_project = flexmock(repo=project_name)
+    src_git_svc.should_receive("get_project").with_args(
+        repo=project_name, namespace=GITLAB_SRC_NAMESPACE
+    ).and_return(src_git_project)
     src_git_project.should_receive("get_tags").and_return(src_git_tags).once()
 
     out_of_date_branches = sorted(
-        Updater(configuration=config)._out_of_date_branches("rsync")
+        Updater(configuration=config)._get_out_of_date_branches(project_name)
     )
     assert out_of_date_branches == [("c8", "fa4074d481e8088a1b9167f1b3d2318dd29604a0")]
 
@@ -131,10 +130,14 @@ def test_check_updates():
     Each project in the source-git namespace is checked whether is up to date.
     A Celery task is created for each out-of-date branch in these projects.
     """
-    src_git_svc = flexmock(api_url="https://git.centos.org/api/0/")
+    gitlab_groups = flexmock()
+    gitlab_instance = flexmock(groups=gitlab_groups)
+    src_git_svc = flexmock(
+        instance_url="https://git.centos.org/api/0/", gitlab_instance=gitlab_instance
+    )
     dist_git_svc = flexmock(api_url="https://git.centos.org/api/0/")
     config = flexmock(
-        src_git_namespace="source-git",
+        src_git_namespace=GITLAB_SRC_NAMESPACE,
         src_git_svc=src_git_svc,
         dist_git_svc=dist_git_svc,
         dist_git_namespace="rpms",
@@ -142,48 +145,39 @@ def test_check_updates():
         branches_watched=["c8", "c8s"],
         update_task_expires=3600,
     )
-    responses = [
-        {
-            "pagination": {"next": "https://next.page?param=value", "pages": 2},
-            "projects": [
-                {"name": "acl"},
-                {"name": "rsync"},
-            ],
-        },
-        {
-            "pagination": {"next": None, "pages": 2},
-            "projects": [
-                {"name": "kernel"},
-                {"name": "systemd"},
-            ],
-        },
-    ]
+    gitlab_projects = flexmock()
+    src_gitlab_group = flexmock(projects=gitlab_projects)
+    gitlab_groups.should_receive("get").and_return(src_gitlab_group)
+    gitlab_projects.should_receive("list").with_args(page=1, per_page=100).and_return(
+        [
+            flexmock(name="acl"),
+            flexmock(name="rsync"),
+            flexmock(name="kernel"),
+            flexmock(name="systemd"),
+        ]
+    )
+    src_project_rsync = flexmock(repo="rsync")
+    gitlab_projects.should_receive("list").with_args(page=2, per_page=100).and_return(
+        []
+    )
+    src_git_svc.should_receive("get_project").with_args(
+        repo="acl", namespace=GITLAB_SRC_NAMESPACE
+    ).and_return(flexmock(repo="acl"))
+    src_git_svc.should_receive("get_project").with_args(
+        repo="rsync", namespace=GITLAB_SRC_NAMESPACE
+    ).and_return(src_project_rsync)
+    src_git_svc.should_receive("get_project").with_args(
+        repo="kernel", namespace=GITLAB_SRC_NAMESPACE
+    ).and_return(flexmock(repo="kernel"))
+    src_git_svc.should_receive("get_project").with_args(
+        repo="systemd", namespace=GITLAB_SRC_NAMESPACE
+    ).and_return(flexmock(repo="systemd"))
     flexmock(sentry).should_receive("configure_sentry").once()
     # projects are retrieved until there is a 'next' page
-    (
-        src_git_svc.should_receive("call_api")
-        .with_args(
-            f"{src_git_svc.api_url}projects",
-            params={
-                "namespace": config.src_git_namespace,
-                "pattern": None,
-                "fork": False,
-                "per_page": 100,
-                "owner": None,
-                "short": True,
-            },
-        )
-        .and_return(responses[0])
-    )
-    (
-        src_git_svc.should_receive("call_api")
-        .with_args(f"{responses[0]['pagination']['next']}", params=None)
-        .and_return(responses[1])
-    )
-    mock_rsync_project = flexmock()
+    dist_project_rsync = flexmock()
     dist_git_projects = {
         "acl": flexmock(),
-        "rsync": mock_rsync_project,
+        "rsync": dist_project_rsync,
         "kernel": flexmock(full_repo_name="rpms/kernel"),
         "systemd": flexmock(),
     }
@@ -203,17 +197,17 @@ def test_check_updates():
             .and_return(project != "kernel")
         )
 
-    # out-of-date branches are only checked if a dist-git repo counterpart exists
-    for project in ["acl", "rsync", "systemd"]:
-        (
-            flexmock(Updater)
-            .should_receive("_out_of_date_branches")
-            .with_args(project, None)
-            .and_return([] if project != "rsync" else [("c8s", "commit_hash")])
-        )
+    # return empty list for all except rsync, order of these mocks is important!
+    (flexmock(Updater).should_receive("_get_out_of_date_branches").and_return([]))
+    (
+        flexmock(Updater)
+        .should_receive("_get_out_of_date_branches")
+        .with_args("rsync", None)
+        .and_return([("c8s", "commit_hash")])
+    )
     # tasks are only created for out-of-date projects
     flexmock(Updater).should_receive("_create_task").with_args(
-        mock_rsync_project, "c8s", "commit_hash"
+        dist_project_rsync, "c8s", "commit_hash"
     ).once()
     # source-git repos without a dist-git counterpart are monitored
     flexmock(Pushgateway).should_receive("push_found_missing_dist_git_repo").once()

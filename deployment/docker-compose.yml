@@ -46,10 +46,12 @@ services:
       DEPLOYMENT: dev
       APP: dist2src.worker.tasks
       CELERY_TASK_NAME: task.dist2src.process_message
+      D2S_LOGS_DIR: /tmp/d2s-logs
+      D2S_WORKDIR: /tmp/d2s-workdir
     volumes:
       - ../dist2src/worker:/usr/local/lib/python3.6/site-packages/dist2src/worker:ro,z
       - ./roles/deploy/files/secrets/dev/ssh:/d2s-ssh:ro,z
-    #user: "123123"
+    user: packit
 
   centosmsg:
     container_name: centosmsg
@@ -61,6 +63,7 @@ services:
       LOG_LEVEL: DEBUG
       REDIS_SERVICE_HOST: redis
       CELERY_TASK_NAME: task.dist2src.process_message
+      MQTT_HOST: mqtt.git.centos.org
       #DISABLE_SENDING_CELERY_TASKS: disable
     volumes:
       - ./roles/deploy/files/secrets/dev/centos-server-ca.cert:/secrets/centos-server-ca.cert:ro,Z

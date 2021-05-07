@@ -5,3 +5,6 @@ tests/data/*/SOURCES/*.tar.gz
 deployment/roles/deploy/files/secrets
 deployment/roles/deploy/vars/*.yml
 !deployment/roles/deploy/vars/local.yml
+
+rpms
+source-git

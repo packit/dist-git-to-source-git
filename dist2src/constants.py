@@ -98,6 +98,7 @@ START_TAG_TEMPLATE = "{branch}-source-git"
 POST_CLONE_HOOK = "post-clone"
 AFTER_PREP_HOOK = "after-prep"
 TEMP_SG_BRANCH = "updates"
+GITLAB_SRC_NAMESPACE = "redhat/centos-stream/src"
 
 HOOKS: Dict[str, Dict[str, Any]] = {
     "kernel": {
