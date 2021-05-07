@@ -6,7 +6,6 @@ from logging import getLogger
 from typing import List, Optional, Tuple
 
 from gitlab import GitlabGetError
-from ogr.services.gitlab import GitlabProject
 from ogr.services.pagure import PagureProject
 
 from dist2src.worker import sentry
@@ -55,37 +54,34 @@ class Updater:
         src_gitlab_group = self.cfg.src_git_svc.gitlab_instance.groups.get(
             self.cfg.src_git_namespace
         )
+
+        # Check and update only 'project' if defined, otherwise
+        # check and update all the projects in the namespace.
+        n = 1
         if project:
-            # update only the selected project
-            gitlab_project = self.cfg.src_git_svc.get_project(
-                repo=project, namespace=self.cfg.src_git_namespace
-            )
-            self.check_and_update_project(gitlab_project, branch=branch)
+            projects = [project]
         else:
-            # iterate through all projects in the group: 9999 * 100
-            for n in range(1, 9999):
-                # Get repositories in source-git
-                projects = src_gitlab_group.projects.list(
+            projects = [
+                p.name
+                for p in src_gitlab_group.projects.list(
                     page=n, per_page=self.PROJECTS_PER_PAGE
                 )
-                if not projects:
-                    break
-                for project_g in projects:
-                    # we need to explicitly get every project from the API because those returned
-                    # above are limited:
-                    #   GroupProject objects returned by this API call are very limited,
-                    #   and do not provide all the features of Project objects.
-                    #   If you need to manipulate projects, create a new Project object.
-                    # https://python-gitlab.readthedocs.io/en/latest/gl_objects/groups.html
-                    gitlab_project = self.cfg.src_git_svc.get_project(
-                        repo=project_g.name, namespace=self.cfg.src_git_namespace
-                    )
-                    self.check_and_update_project(gitlab_project, branch=branch)
+            ]
+
+        while projects:
+            for project_to_be_processed in projects:
+                self._check_and_update_project(project_to_be_processed, branch=branch)
+            if project:
+                # there is only a single project to check
+                break
+            n += 1
+            projects = src_gitlab_group.projects.list(
+                page=n, per_page=self.PROJECTS_PER_PAGE
+            )
+
         Pushgateway().push_dist2src_finished_checking_updates()
 
-    def check_and_update_project(
-        self, project: GitlabProject, branch: Optional[str] = None
-    ):
+    def _check_and_update_project(self, project: str, branch: Optional[str] = None):
         """check selected src repo and queue update tasks for branch which are out of date"""
         dist_git_project = self._get_dist_git(project)
         if not dist_git_project.exists():
@@ -101,23 +97,27 @@ class Updater:
             )
             self._create_task(dist_git_project, branch, commit)
 
-    def _get_dist_git(self, project: GitlabProject) -> PagureProject:
+    def _get_dist_git(self, project: str) -> PagureProject:
         """get corresponding dist-git repo for a src repo"""
         return self.cfg.dist_git_svc.get_project(
             namespace=singular_fork(self.cfg.dist_git_namespace),
-            repo=project.repo,
+            repo=project,
             # Specify username in order to disable superfluous whoami API calls.
             username="packit",
         )
 
     def _get_out_of_date_branches(
-        self, project: GitlabProject, branch: Optional[str] = None
+        self, project: str, branch: Optional[str] = None
     ) -> List[Tuple[str, str]]:
+        """
+        return a list of (branch, commit) objects for the selected source-git repo -
+        the branches are out of date against their dist-git counterparts and need updating
+        """
         logger.debug(f"Checking project {project!r}...")
         # Get branches with commits from their HEAD from dist-git
         url = (
             f"{self.cfg.dist_git_svc.api_url}"
-            f"{singular_fork(self.cfg.dist_git_namespace)}/{project.repo}/git/branches"
+            f"{singular_fork(self.cfg.dist_git_namespace)}/{project}/git/branches"
         )
         r = self.cfg.dist_git_svc.call_api(url, params={"with_commits": True})
 
@@ -135,9 +135,12 @@ class Updater:
         expected_tags_set = set(expected_tags)
         logger.debug(f"Tags expected in source-git: {expected_tags_set}")
 
+        src_git_project = self.cfg.src_git_svc.get_project(
+            repo=project, namespace=self.cfg.src_git_namespace
+        )
         # Get tags from source-git
         try:
-            src_git_tags = set(tag.name for tag in project.get_tags())
+            src_git_tags = set(tag.name for tag in src_git_project.get_tags())
         except GitlabGetError as ex:
             logger.info(f"Unable to obtain tags of {project}: {ex}")
             if ex.response_code == 404:

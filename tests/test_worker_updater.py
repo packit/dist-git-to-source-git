@@ -53,10 +53,13 @@ def test_get_out_of_date_branches():
         .once()
     )
     src_git_project = flexmock(repo=project_name)
+    src_git_svc.should_receive("get_project").with_args(
+        repo=project_name, namespace=GITLAB_SRC_NAMESPACE
+    ).and_return(src_git_project)
     src_git_project.should_receive("get_tags").and_return(src_git_tags).once()
 
     out_of_date_branches = sorted(
-        Updater(configuration=config)._get_out_of_date_branches(src_git_project)
+        Updater(configuration=config)._get_out_of_date_branches(project_name)
     )
     assert out_of_date_branches == [("c8", "fa4074d481e8088a1b9167f1b3d2318dd29604a0")]
 
@@ -199,7 +202,7 @@ def test_check_updates():
     (
         flexmock(Updater)
         .should_receive("_get_out_of_date_branches")
-        .with_args(src_project_rsync, None)
+        .with_args("rsync", None)
         .and_return([("c8s", "commit_hash")])
     )
     # tasks are only created for out-of-date projects
