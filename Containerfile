@@ -26,7 +26,7 @@ RUN $package_manager install epel-release \
     && ansible-playbook -vv -c local -i localhost, /src/install-deps-worker.yml \
     && $package_manager clean all
 
-COPY README.md setup.cfg setup.py files/gitconfig files/run_worker.sh /src/
+COPY README.md setup.cfg setup.py files/gitconfig files/run_worker.sh files/setup_env_in_openshift.sh /src/
 COPY dist2src /src/dist2src
 RUN ln -s -f /src/pyproject.toml /pyproject.toml
 # setuptools-scm

@@ -17,10 +17,12 @@ else
   LOGLEVEL="DEBUG"
 fi
 
-DEFAULT_HOST="git.centos.org"
-D2S_DIST_GIT_HOST="${D2S_DIST_GIT_HOST:-$DEFAULT_HOST}"
-DEFAULT_HOST="git.stg.centos.org"
-D2S_SRC_GIT_HOST="${D2S_SRC_GIT_HOST:-$DEFAULT_HOST}"
+source /src/setup_env_in_openshift.sh
+
+DEFAULT_DISTGIT_HOST="git.centos.org"
+D2S_DIST_GIT_HOST="${D2S_DIST_GIT_HOST:-$DEFAULT_DISTGIT_HOST}"
+DEFAULT_SRC_HOST="gitlab.com"
+D2S_SRC_GIT_HOST="${D2S_SRC_GIT_HOST:-$DEFAULT_SRC_HOST}"
 
 mkdir --mode=0700 -p "${HOME}/.ssh"
 pushd "${HOME}/.ssh"

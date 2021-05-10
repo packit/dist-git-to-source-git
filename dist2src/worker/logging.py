@@ -3,9 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-def set_logging_to_file(
-    repo_name: str, commit_sha: str, logs_dir: Path = Path("/log-files/")
-):
+def set_logging_to_file(repo_name: str, commit_sha: str, logs_dir: Path):
     """
     Set logging to a file for conversion.
     :param repo_name: name of the repository

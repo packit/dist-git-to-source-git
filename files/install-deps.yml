@@ -14,6 +14,7 @@
           # - python3-click  # we need click >= 7, there's v6.7 in centos8
           - python3-sh
           - packit
+          - nss_wrapper # for openshift so we can have regular packit user in pod
         state: latest
         enablerepo: powertools
     - name: Install tools required by %prep section of some packages

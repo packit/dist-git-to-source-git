@@ -2,16 +2,14 @@
 # SPDX-License-Identifier: MIT
 
 import os
-import re
-
 from logging import getLogger
 from typing import List, Optional, Tuple
-from ogr.services.pagure import PagureProject
-from ogr.exceptions import OgrException
-from requests.exceptions import RetryError
 
-from dist2src.worker import singular_fork, plural_fork
+from gitlab import GitlabGetError
+from ogr.services.pagure import PagureProject
+
 from dist2src.worker import sentry
+from dist2src.worker import singular_fork, plural_fork
 from dist2src.worker.config import Configuration
 from dist2src.worker.monitoring import Pushgateway
 
@@ -34,13 +32,13 @@ class Updater:
         self, project: Optional[str] = None, branch: Optional[str] = None
     ):
         """
-        Check if repositories in a soource-git namespace need to be updated
+        Check if repositories in a source-git namespace need to be updated
         and create Celery tasks to update them, if configured and needed.
 
         Limit the checks to 'project' and 'branch', if the arguments are
         specified.
         """
-        logger.debug(f"Source-git API: {self.cfg.src_git_svc.api_url!r}")
+        logger.debug(f"Source-git instance: {self.cfg.src_git_svc.instance_url!r}")
         logger.debug(f"Source-git namespace: {self.cfg.src_git_namespace!r}")
         logger.debug(f"Dist-git API: {self.cfg.dist_git_svc.api_url!r}")
         logger.debug(f"Dist-git namespace: {self.cfg.dist_git_namespace!r}")
@@ -53,46 +51,39 @@ class Updater:
         else:
             logger.debug("Celery tasks created never expire")
 
-        m = re.match(
-            r"(?P<fork>forks\/)?((?P<owner>.+)\/)?(?P<namespace>.+)",
-            self.cfg.src_git_namespace,
+        src_gitlab_group = self.cfg.src_git_svc.gitlab_instance.groups.get(
+            self.cfg.src_git_namespace
         )
 
-        # Get repositories in source-git
-        url = f"{self.cfg.src_git_svc.api_url}projects"
-        params = {
-            "namespace": m["namespace"],
-            "pattern": project,
-            "fork": m["fork"] is not None,
-            "per_page": self.PROJECTS_PER_PAGE,
-            "owner": m["owner"] or None,
-            "short": True,
-        }
-        while url:
-            r = self.cfg.src_git_svc.call_api(url, params=params)
-            # The URL in 'next' already has the required parameters
-            url, params = r["pagination"]["next"], None
-            logger.debug(
-                f"Next page: {url!r}. Total pages: {r['pagination']['pages']!r}."
+        # Check and update only 'project' if defined, otherwise
+        # check and update all the projects in the namespace.
+        n = 1
+        if project:
+            projects = [project]
+        else:
+            projects = [
+                p.name
+                for p in src_gitlab_group.projects.list(
+                    page=n, per_page=self.PROJECTS_PER_PAGE
+                )
+            ]
+
+        while projects:
+            for project_to_be_processed in projects:
+                self._check_and_update_project(project_to_be_processed, branch=branch)
+            if project:
+                # there is only a single project to check
+                break
+            n += 1
+            projects = src_gitlab_group.projects.list(
+                page=n, per_page=self.PROJECTS_PER_PAGE
             )
-            for src_git_project in r["projects"]:
-                try:
-                    self._check_project(src_git_project["name"], branch)
-                except (OgrException, RetryError):
-                    logger.exception(
-                        f"Failed checking project {src_git_project['name']!r}"
-                    )
-                    continue
+
         Pushgateway().push_dist2src_finished_checking_updates()
 
-    def _check_project(self, project: str, branch: Optional[str] = None):
-        logger.debug(f"Checking project {project!r}...")
-        dist_git_project = self.cfg.dist_git_svc.get_project(
-            namespace=singular_fork(self.cfg.dist_git_namespace),
-            repo=project,
-            # Specify username in order to disable superfluous whoami API calls.
-            username="packit",
-        )
+    def _check_and_update_project(self, project: str, branch: Optional[str] = None):
+        """check selected src repo and queue update tasks for branch which are out of date"""
+        dist_git_project = self._get_dist_git(project)
         if not dist_git_project.exists():
             logger.warning(
                 f"{dist_git_project.full_repo_name!r} does not exist in "
@@ -100,16 +91,29 @@ class Updater:
             )
             Pushgateway().push_found_missing_dist_git_repo()
             return
-
-        for _branch, _commit in self._out_of_date_branches(project, branch):
+        for branch, commit in self._get_out_of_date_branches(project, branch):
             logger.info(
-                f"Branch {_branch!r} from project {project!r} needs to be updated."
+                f"Branch {branch!r} from project {project!r} needs to be updated."
             )
-            self._create_task(dist_git_project, _branch, _commit)
+            self._create_task(dist_git_project, branch, commit)
 
-    def _out_of_date_branches(
+    def _get_dist_git(self, project: str) -> PagureProject:
+        """get corresponding dist-git repo for a src repo"""
+        return self.cfg.dist_git_svc.get_project(
+            namespace=singular_fork(self.cfg.dist_git_namespace),
+            repo=project,
+            # Specify username in order to disable superfluous whoami API calls.
+            username="packit",
+        )
+
+    def _get_out_of_date_branches(
         self, project: str, branch: Optional[str] = None
     ) -> List[Tuple[str, str]]:
+        """
+        return a list of (branch, commit) objects for the selected source-git repo -
+        the branches are out of date against their dist-git counterparts and need updating
+        """
+        logger.debug(f"Checking project {project!r}...")
         # Get branches with commits from their HEAD from dist-git
         url = (
             f"{self.cfg.dist_git_svc.api_url}"
@@ -131,20 +135,25 @@ class Updater:
         expected_tags_set = set(expected_tags)
         logger.debug(f"Tags expected in source-git: {expected_tags_set}")
 
-        # Get tags from source-git
         src_git_project = self.cfg.src_git_svc.get_project(
-            namespace=singular_fork(self.cfg.src_git_namespace),
-            repo=project,
-            # Specify username in order to disable superfluous whoami API calls.
-            username="packit",
+            repo=project, namespace=self.cfg.src_git_namespace
         )
-        src_git_tags = set(tag.name for tag in src_git_project.get_tags())
+        # Get tags from source-git
+        try:
+            src_git_tags = set(tag.name for tag in src_git_project.get_tags())
+        except GitlabGetError as ex:
+            logger.info(f"Unable to obtain tags of {project}: {ex}")
+            if ex.response_code == 404:
+                src_git_tags = set()
+            else:
+                raise
         logger.debug(f"Current tags in source-git: {src_git_tags}")
         missing_tags = expected_tags_set - src_git_tags
         logger.debug(f"Tags missing from source-git: {missing_tags}")
         return [expected_tags[tag] for tag in missing_tags]
 
     def _create_task(self, project: PagureProject, branch: str, commit: str):
+        """create a task to update selected (project, branch, commit)"""
         task_name = os.getenv("CELERY_TASK_NAME")
         if task_name is None:
             logger.debug("No task name is set, skip creating a Celery task.")
