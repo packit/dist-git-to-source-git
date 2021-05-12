@@ -152,12 +152,16 @@ def test_check_updates():
         [
             flexmock(name="acl"),
             flexmock(name="rsync"),
-            flexmock(name="kernel"),
-            flexmock(name="systemd"),
         ]
     )
     src_project_rsync = flexmock(repo="rsync")
     gitlab_projects.should_receive("list").with_args(page=2, per_page=100).and_return(
+        [
+            flexmock(name="kernel"),
+            flexmock(name="systemd"),
+        ]
+    )
+    gitlab_projects.should_receive("list").with_args(page=3, per_page=100).and_return(
         []
     )
     src_git_svc.should_receive("get_project").with_args(
