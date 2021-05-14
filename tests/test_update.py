@@ -61,11 +61,7 @@ def test_update(tmp_path: Path, package_name, branch):
     assert_repo_is_not_dirty(sg_path)
 
     run_packit(
-        [
-            "--debug",
-            "srpm",
-            "."
-        ],
+        ["--debug", "srpm", "."],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
     srpm_path = next(sg_path.glob("*.src.rpm"))
@@ -119,11 +115,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     second_round_commits = list(sg_repo.iter_commits(f"{upstream_ref}..HEAD"))
 
     run_packit(
-        [
-            "--debug",
-            "srpm",
-            "."
-        ],
+        ["--debug", "srpm", "."],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
     srpm_path = next(sg_path.glob("*.src.rpm"))
@@ -192,11 +184,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
     assert_repo_is_not_dirty(sg_path)
 
     run_packit(
-        [
-            "--debug",
-            "srpm",
-            "."
-        ],
+        ["--debug", "srpm", "."],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
     srpm_path = next(sg_path.glob("*.src.rpm"))
@@ -244,11 +232,7 @@ def test_update_existing(tmp_path: Path, package):
     )
     assert_repo_is_not_dirty(source_git_path)
     run_packit(
-        [
-            "--debug",
-            "srpm",
-            "."
-        ],
+        ["--debug", "srpm", "."],
         working_dir=source_git_path,
     )
     srpm_path = next(source_git_path.glob("*.src.rpm"))
@@ -282,11 +266,7 @@ def test_update_catch(tmp_path: Path):
     )
     assert_repo_is_not_dirty(source_git_path)
     run_packit(
-        [
-            "--debug",
-            "srpm",
-            "."
-        ],
+        ["--debug", "srpm", "."],
         working_dir=source_git_path,
     )
     srpm_path = next(source_git_path.glob("*.src.rpm"))
