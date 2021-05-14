@@ -7,6 +7,7 @@ from typing import Union
 
 import git
 import pytest
+
 from dist2src.constants import START_TAG_TEMPLATE
 
 from tests.conftest import (
@@ -15,7 +16,8 @@ from tests.conftest import (
     TEST_PROJECTS_WITH_BRANCHES_SINGLE_COMMIT,
     run_dist2src,
     run_packit,
-    clone_package,
+    clone_package_rpms,
+    clone_package_src,
 )
 
 
@@ -36,7 +38,7 @@ def test_update(tmp_path: Path, package_name, branch):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    clone_package(package_name, str(dist_git_path), branch=branch)
+    clone_package_rpms(package_name, str(dist_git_path), branch=branch)
     subprocess.check_call(
         ["git", "reset", "--hard", "HEAD~1"],
         cwd=dist_git_path,
@@ -62,6 +64,7 @@ def test_update(tmp_path: Path, package_name, branch):
         [
             "--debug",
             "srpm",
+            "."
         ],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
@@ -96,7 +99,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    clone_package(package_name, str(dist_git_path), branch=branch)
+    clone_package_rpms(package_name, str(dist_git_path), branch=branch)
 
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
@@ -119,6 +122,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
         [
             "--debug",
             "srpm",
+            "."
         ],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
@@ -165,7 +169,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    clone_package(package_name, str(dist_git_path), branch=branch)
+    clone_package_rpms(package_name, str(dist_git_path), branch=branch)
     subprocess.check_call(
         ["git", "reset", "--hard", old_version],
         cwd=dist_git_path,
@@ -191,6 +195,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
         [
             "--debug",
             "srpm",
+            "."
         ],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
@@ -213,8 +218,6 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
     "package",
     (
         "apr",
-        "meson",
-        "ostree",
         "pacemaker",
         "vala",
         "upower",
@@ -229,14 +232,8 @@ def test_update_existing(tmp_path: Path, package):
     dg_branch = "c8s"
     source_git_path = tmp_path / "s" / package
     sg_branch = "c8s"
-    clone_package(package, str(dist_git_path), branch=dg_branch)
-    clone_package(
-        package,
-        str(source_git_path),
-        branch="master",
-        namespace="source-git",
-        stg=True,
-    )
+    clone_package_rpms(package, str(dist_git_path), branch=dg_branch)
+    clone_package_src(package, str(source_git_path), branch=sg_branch)
     run_dist2src(
         [
             "-vvv",
@@ -250,6 +247,7 @@ def test_update_existing(tmp_path: Path, package):
         [
             "--debug",
             "srpm",
+            "."
         ],
         working_dir=source_git_path,
     )
@@ -258,7 +256,6 @@ def test_update_existing(tmp_path: Path, package):
 
 
 @pytest.mark.slow
-@pytest.mark.skip(msg="We need packit 0.20")
 def test_update_catch(tmp_path: Path):
     """
     make sure we can update package catch and
@@ -269,13 +266,11 @@ def test_update_catch(tmp_path: Path):
     dg_branch = "c8"
     source_git_path = tmp_path / "s" / package
     sg_branch = "c8"
-    clone_package(package, str(dist_git_path), branch=dg_branch)
-    clone_package(
+    clone_package_rpms(package, str(dist_git_path), branch=dg_branch)
+    clone_package_src(
         package,
         str(source_git_path),
-        branch="master",
-        namespace="source-git",
-        stg=True,
+        branch=sg_branch,
     )
     run_dist2src(
         [
@@ -290,6 +285,7 @@ def test_update_catch(tmp_path: Path):
         [
             "--debug",
             "srpm",
+            "."
         ],
         working_dir=source_git_path,
     )
