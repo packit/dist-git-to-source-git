@@ -80,7 +80,10 @@ def run_packit(*args, working_dir=None, **kwargs):
     working_dir = working_dir or Path.cwd()
     with cwd(working_dir):
         cli_runner = CliRunner()
-        cli_runner.invoke(packit_base, *args, catch_exceptions=False, **kwargs)
+        cli_result = cli_runner.invoke(
+            packit_base, *args, catch_exceptions=False, **kwargs
+        )
+    print(cli_result.stdout)  # contains both std{err,out}
 
 
 def clone_package_rpms(
