@@ -80,15 +80,36 @@ def run_packit(*args, working_dir=None, **kwargs):
     working_dir = working_dir or Path.cwd()
     with cwd(working_dir):
         cli_runner = CliRunner()
-        cli_runner.invoke(packit_base, *args, catch_exceptions=False, **kwargs)
+        cli_result = cli_runner.invoke(
+            packit_base, *args, catch_exceptions=False, **kwargs
+        )
+    print(cli_result.stdout)  # contains both std{err,out}
 
 
-def clone_package(
+def clone_package_rpms(
     package_name: str,
     dist_git_path: str,
     branch: str = "c8s",
-    namespace: str = "rpms",
-    stg: bool = False,
+):
+    """
+    clone selected package from git.centos.org/rpms
+    """
+    subprocess.check_call(
+        [
+            "git",
+            "clone",
+            "-b",
+            branch,
+            f"https://git.centos.org/rpms/{package_name}.git",
+            dist_git_path,
+        ]
+    )
+
+
+def clone_package_src(
+    package_name: str,
+    src_git_path: str,
+    branch: str = "c8s",
 ):
     """
     clone selected package from git.[stg.]centos.org
@@ -99,7 +120,7 @@ def clone_package(
             "clone",
             "-b",
             branch,
-            f"https://git{'.stg' if stg else ''}.centos.org/{namespace}/{package_name}.git",
-            dist_git_path,
+            f"https://gitlab.com/redhat/centos-stream/src/{package_name}.git",
+            src_git_path,
         ]
     )

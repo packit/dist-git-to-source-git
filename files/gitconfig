@@ -5,6 +5,8 @@
     default = current
 [merge]
     renames = false
+[pull]
+    ff = only
 [http]
     # https://stackoverflow.com/questions/6842687/the-remote-end-hung-up-unexpectedly-while-git-cloning
     # we are unable to clone kernel, hence the postBuffer thingy

@@ -6,6 +6,7 @@ from logging import getLogger
 from typing import List, Optional, Tuple
 
 from gitlab import GitlabGetError
+from gitlab.v4.objects import Group
 from ogr.services.pagure import PagureProject
 
 from dist2src.worker import sentry
@@ -61,12 +62,7 @@ class Updater:
         if project:
             projects = [project]
         else:
-            projects = [
-                p.name
-                for p in src_gitlab_group.projects.list(
-                    page=n, per_page=self.PROJECTS_PER_PAGE
-                )
-            ]
+            projects = self._get_project_name_in_group_for_page(src_gitlab_group, n)
 
         while projects:
             for project_to_be_processed in projects:
@@ -75,11 +71,20 @@ class Updater:
                 # there is only a single project to check
                 break
             n += 1
-            projects = src_gitlab_group.projects.list(
-                page=n, per_page=self.PROJECTS_PER_PAGE
-            )
+            projects = self._get_project_name_in_group_for_page(src_gitlab_group, n)
 
         Pushgateway().push_dist2src_finished_checking_updates()
+
+    def _get_project_name_in_group_for_page(
+        self, gitlab_group: Group, page: int
+    ) -> List[str]:
+        """return a list of project names in a GitLab namespace for a given page"""
+        return [
+            p.name
+            for p in gitlab_group.projects.list(
+                page=page, per_page=self.PROJECTS_PER_PAGE
+            )
+        ]
 
     def _check_and_update_project(self, project: str, branch: Optional[str] = None):
         """check selected src repo and queue update tasks for branch which are out of date"""
