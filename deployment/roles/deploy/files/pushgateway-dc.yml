@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: pushgateway
-          image: weaveworks/prom-aggregation-gateway
+          image: quay.io/packit/prom-aggregation-gateway
           args: ["--listen=:9091"]
           imagePullPolicy: IfNotPresent
           ports:

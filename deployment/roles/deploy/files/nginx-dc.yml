@@ -23,7 +23,7 @@ spec:
             name: nginx
       containers:
         - name: nginx
-          image: nginxinc/nginx-unprivileged
+          image: quay.io/packit/nginx-unprivileged
           ports:
             - containerPort: 8080
           volumeMounts:
