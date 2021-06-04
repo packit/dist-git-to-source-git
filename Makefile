@@ -1,7 +1,7 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
 
-.PHONY: usage convert clean build run check check-in-container deploy check-deployment
+.PHONY: usage convert clean build build-test-image run check check-in-container deploy check-deployment
 
 PACKAGE ?= rpm
 BRANCH ?= c8s
@@ -36,6 +36,9 @@ clean:
 build:
 	$(CONTAINER_ENGINE) build -t $(IMAGE_NAME) -f Containerfile --network host .
 
+# Define this in order to be consistent with other Packit projects
+build-test-image: build
+
 run:
 	$(CONTAINER_ENGINE) run \
 		-ti --rm \
@@ -63,7 +66,6 @@ check-in-container:
 		-v $(CURDIR)/macros.packit:/usr/lib/rpm/macros.d/macros.packit:Z \
 		-v $(CURDIR)/tests:/tests:Z \
 		-v $(CURDIR):/src:Z \
-		-u $(shell id -u) \
 		-w / \
 		$(OPTS) \
 		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv $(TEST_TARGET)
