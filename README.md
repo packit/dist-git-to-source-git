@@ -13,7 +13,7 @@ history and applies the patches from dist-git.
 In this case though, the starting point is dist-git itself, so a few things
 need to be done differently.
 
-_Note:_ things bellow were done on git.centos.org/rpms/rpm.
+_Note:_ things below were done on git.centos.org/rpms/rpm.
 
 ## Intermezzo: what should happen to all the patches?
 
@@ -121,14 +121,14 @@ sub-directory and the resulting source-git repo is going to be stored in
 
 ## Tests
 
-In `tests` test suite, you can find functional tests which convert
+In the `tests` test suite, you can find functional tests which convert
 real dist-git packages.
-They can be run inside container (`make build` and
+
+They can be run in a container (`make build-test-image` and
 `make check-in-container`) or on localhost (`make check`).
 
-- You can override container engine of your choice
-  with env var `CONTAINER_ENGINE`.
-- When running locally, have mock installed and set up -- last step of
+- You can override the container engine via the env var `CONTAINER_ENGINE`.
+- When running locally, have mock installed and set up -- the last step of
   the testing is to build the generated SRPM from a source-git repo
   using `mock --rebuild -r centos-stream-x86_64`).
 

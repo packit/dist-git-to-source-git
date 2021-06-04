@@ -7,6 +7,7 @@ PACKAGE ?= rpm
 BRANCH ?= c8s
 DIR ?= git.centos.org
 IMAGE_NAME := quay.io/packit/dist2src:dev
+TEST_IMAGE ?= quay.io/packit/dist2src:dev
 CONTAINER_ENGINE ?= $(shell command -v podman 2> /dev/null || echo docker)
 CONTAINER_CMD ?= /bin/bash
 TEST_TARGET ?= ./tests
@@ -35,6 +36,9 @@ clean:
 
 build:
 	$(CONTAINER_ENGINE) build -t $(IMAGE_NAME) -f Containerfile --network host .
+
+build-test-image: build
+	$(CONTAINER_ENGINE) build -t $(TEST_IMAGE) -f Containerfile.tests --network host .
 
 run:
 	$(CONTAINER_ENGINE) run \
@@ -66,7 +70,7 @@ check-in-container:
 		-u $(shell id -u) \
 		-w / \
 		$(OPTS) \
-		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv $(TEST_TARGET)
+		$(TEST_IMAGE) pytest --color=$(COLOR) --showlocals -vv $(TEST_TARGET)
 
 # example:
 # DEPLOYMENT=local make deploy TAGS=worker
