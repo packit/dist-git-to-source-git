@@ -121,6 +121,8 @@ IGNORED_PACKAGES: Iterable[Tuple[str, str]] = [
     ("cockpit", "c8s"),
     ("cockpit-appstream", "c8s"),
     ("docbook-dtds", "c8"),
+    # git used in %prep, c8s branch was deleted from src/edk2
+    ("edk2", "c8s"),
     ("gcc", "c8"),
     ("gcc", "c8s"),
     ("google-noto-cjk-fonts", "c8s"),
