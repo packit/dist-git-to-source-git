@@ -1,13 +1,12 @@
 # Copyright Contributors to the Packit project.
 # SPDX-License-Identifier: MIT
 
-.PHONY: usage convert clean build run check check-in-container deploy check-deployment
+.PHONY: usage convert clean build build-test-image run check check-in-container deploy check-deployment
 
 PACKAGE ?= rpm
 BRANCH ?= c8s
 DIR ?= git.centos.org
 IMAGE_NAME := quay.io/packit/dist2src:dev
-TEST_IMAGE ?= quay.io/packit/dist2src:dev
 CONTAINER_ENGINE ?= $(shell command -v podman 2> /dev/null || echo docker)
 CONTAINER_CMD ?= /bin/bash
 TEST_TARGET ?= ./tests
@@ -38,7 +37,6 @@ build:
 	$(CONTAINER_ENGINE) build -t $(IMAGE_NAME) -f Containerfile --network host .
 
 build-test-image: build
-	$(CONTAINER_ENGINE) build -t $(TEST_IMAGE) -f Containerfile.tests --network host .
 
 run:
 	$(CONTAINER_ENGINE) run \
@@ -67,10 +65,9 @@ check-in-container:
 		-v $(CURDIR)/macros.packit:/usr/lib/rpm/macros.d/macros.packit:Z \
 		-v $(CURDIR)/tests:/tests:Z \
 		-v $(CURDIR):/src:Z \
-		-u $(shell id -u) \
 		-w / \
 		$(OPTS) \
-		$(TEST_IMAGE) pytest --color=$(COLOR) --showlocals -vv $(TEST_TARGET)
+		$(IMAGE_NAME) pytest --color=$(COLOR) --showlocals -vv $(TEST_TARGET)
 
 # example:
 # DEPLOYMENT=local make deploy TAGS=worker
