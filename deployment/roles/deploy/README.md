@@ -15,7 +15,7 @@ if you run `DEPLOYMENT=local make deploy`.
 ## Secrets
 
 You have to create `files/secrets/` yourself.
-Normally you'd just symlink existing `secrets/`,
+Normally you'd just symlink existing `secrets/dist2src/`,
 which you get in our internal repo.
 
 The folder should contain the following files:
