@@ -4,8 +4,6 @@
 ---
 - name: Create vars/dev.yml and deploy
   hosts: all
-  vars:
-    project_dir: "{{ playbook_dir }}/.."
   tasks:
     - name: Install packages for deployment
       dnf:
@@ -30,7 +28,7 @@
           push_dev_images: true
           # Don't try to import from registry
           auto_import_images: false
-        dest: "{{ project_dir }}/deployment/roles/deploy/vars/dev.yml"
+        dest: "{{ zuul.project.src_dir }}/deployment/roles/deploy/vars/dev.yml"
 
     - name: Actually deploy
       command: make deploy
@@ -38,5 +36,5 @@
         DEPLOYMENT: dev
         ANSIBLE_STDOUT_CALLBACK: debug
       args:
-        chdir: "{{ project_dir }}"
+        chdir: "{{ zuul.project.src_dir }}"
       become: true
