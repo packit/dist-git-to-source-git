@@ -4,11 +4,9 @@
 ---
 - name: Build dist2src image
   hosts: all
-  vars:
-    project_dir: "{{ playbook_dir }}/.."
   tasks:
     - name: Build dist2src image
       command: make build
       args:
-        chdir: "{{ project_dir }}"
+        chdir: "{{ zuul.project.src_dir }}"
       become: true

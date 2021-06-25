@@ -1,8 +1,6 @@
 ---
 - name: Build test image & run tests in container
   hosts: all
-  vars:
-    project_dir: "{{ playbook_dir }}/.."
   tasks:
     - name: Install git and podman
       dnf:
@@ -13,12 +11,12 @@
     - name: Build dist2src container image
       command: make build
       args:
-        chdir: "{{ project_dir }}"
+        chdir: "{{ zuul.project.src_dir }}"
       become: true
     - name: Run tests
       command: make check-in-container
       args:
-        chdir: "{{ project_dir }}"
+        chdir: "{{ zuul.project.src_dir }}"
       environment:
         COLOR: "no"
       become: true
