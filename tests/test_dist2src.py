@@ -147,7 +147,7 @@ def test_no_backup(tmp_path: Path):
     d = tmp_path / "d"
     d.mkdir()
     dist_git_path = d / package_name
-    clone_package_rpms(package_name, str(dist_git_path), branch="c8")
+    clone_package_rpms(package_name, dist_git_path, branch="c8")
     b = dist_git_path / "BUILD" / "hyperv-daemons-0"
     run_dist2src(["-v", "run-prep", str(dist_git_path)], working_dir=dist_git_path)
     assert b.is_dir()
@@ -169,7 +169,7 @@ def test_get_lookaside_sources(tmp_path: Path, package, branch):
     s.mkdir()
     dist_git_path = d / package
     source_git_path = s / package
-    clone_package_rpms(package, str(dist_git_path), branch=branch)
+    clone_package_rpms(package, dist_git_path, branch=branch)
 
     d2s = Dist2Src(dist_git_path=dist_git_path, source_git_path=source_git_path)
     sources = d2s.get_lookaside_sources(branch)
@@ -191,7 +191,7 @@ def test_gitlab_ci_config_removed(tmp_path: Path):
     s.mkdir()
     dist_git_path = d / package
     source_git_path = s / package
-    clone_package_rpms(package, str(dist_git_path), branch="c8s")
+    clone_package_rpms(package, dist_git_path, branch="c8s")
     gitlab_config_name = ".gitlab-ci.yml"
 
     d2s = Dist2Src(dist_git_path=dist_git_path, source_git_path=source_git_path)

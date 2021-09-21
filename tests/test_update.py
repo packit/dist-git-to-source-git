@@ -38,7 +38,7 @@ def test_update(tmp_path: Path, package_name, branch):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    clone_package_rpms(package_name, str(dist_git_path), branch=branch)
+    clone_package_rpms(package_name, dist_git_path, branch=branch)
     subprocess.check_call(
         ["git", "reset", "--hard", "HEAD~1"],
         cwd=dist_git_path,
@@ -64,8 +64,8 @@ def test_update(tmp_path: Path, package_name, branch):
         ["--debug", "srpm", "."],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
-    srpm_path = next(sg_path.glob("*.src.rpm"))
-    assert srpm_path.exists()
+    srpms = list(sg_path.glob("*.src.rpm"))
+    assert srpms, "No src.rpm found"
     if MOCK_BUILD:
         subprocess.check_call(
             [
@@ -73,7 +73,7 @@ def test_update(tmp_path: Path, package_name, branch):
                 "--rebuild",
                 "-r",
                 "centos-stream-x86_64",
-                srpm_path,
+                srpms[0],
             ]
         )
 
@@ -95,7 +95,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    clone_package_rpms(package_name, str(dist_git_path), branch=branch)
+    clone_package_rpms(package_name, dist_git_path, branch=branch)
 
     run_dist2src(
         ["-vvv", "convert", f"{dist_git_path}:{branch}", f"{sg_path}:{branch}"]
@@ -118,8 +118,8 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
         ["--debug", "srpm", "."],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
-    srpm_path = next(sg_path.glob("*.src.rpm"))
-    assert srpm_path.exists()
+    srpms = list(sg_path.glob("*.src.rpm"))
+    assert srpms, "No src.rpm found"
 
     # Check that patch commits are same
     assert len(first_round_commits) == len(second_round_commits)
@@ -141,7 +141,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
                 "--rebuild",
                 "-r",
                 "centos-stream-x86_64",
-                srpm_path,
+                srpms[0],
             ]
         )
 
@@ -161,7 +161,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
     dist_git_path.mkdir(parents=True)
     sg_path.mkdir(parents=True)
 
-    clone_package_rpms(package_name, str(dist_git_path), branch=branch)
+    clone_package_rpms(package_name, dist_git_path, branch=branch)
     subprocess.check_call(
         ["git", "reset", "--hard", old_version],
         cwd=dist_git_path,
@@ -187,8 +187,8 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
         ["--debug", "srpm", "."],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
-    srpm_path = next(sg_path.glob("*.src.rpm"))
-    assert srpm_path.exists()
+    srpms = list(sg_path.glob("*.src.rpm"))
+    assert srpms, "No src.rpm found"
     if MOCK_BUILD:
         subprocess.check_call(
             [
@@ -196,7 +196,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
                 "--rebuild",
                 "-r",
                 "centos-stream-x86_64",
-                srpm_path,
+                srpms[0],
             ]
         )
 
@@ -220,8 +220,8 @@ def test_update_existing(tmp_path: Path, package):
     dg_branch = "c8s"
     source_git_path = tmp_path / "s" / package
     sg_branch = "c8s"
-    clone_package_rpms(package, str(dist_git_path), branch=dg_branch)
-    clone_package_src(package, str(source_git_path), branch=sg_branch)
+    clone_package_rpms(package, dist_git_path, branch=dg_branch)
+    clone_package_src(package, source_git_path, branch=sg_branch)
     run_dist2src(
         [
             "-vvv",
@@ -235,8 +235,8 @@ def test_update_existing(tmp_path: Path, package):
         ["--debug", "srpm", "."],
         working_dir=source_git_path,
     )
-    srpm_path = next(source_git_path.glob("*.src.rpm"))
-    assert srpm_path.exists()
+    srpms = list(source_git_path.glob("*.src.rpm"))
+    assert srpms, "No src.rpm found"
 
 
 @pytest.mark.slow
@@ -250,10 +250,10 @@ def test_update_catch(tmp_path: Path):
     dg_branch = "c8"
     source_git_path = tmp_path / "s" / package
     sg_branch = "c8"
-    clone_package_rpms(package, str(dist_git_path), branch=dg_branch)
+    clone_package_rpms(package, dist_git_path, branch=dg_branch)
     clone_package_src(
         package,
-        str(source_git_path),
+        source_git_path,
         branch=sg_branch,
     )
     run_dist2src(
@@ -269,8 +269,9 @@ def test_update_catch(tmp_path: Path):
         ["--debug", "srpm", "."],
         working_dir=source_git_path,
     )
-    srpm_path = next(source_git_path.glob("*.src.rpm"))
-    assert srpm_path.exists()
+    srpms = list(source_git_path.glob("*.src.rpm"))
+    assert srpms, "No src.rpm found"
+
     git_log_out = subprocess.check_output(
         ["git", "log", "--pretty=format:%s", "origin/c8.."], cwd=source_git_path
     ).decode()
