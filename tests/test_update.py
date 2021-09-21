@@ -64,8 +64,8 @@ def test_update(tmp_path: Path, package_name, branch):
         ["--debug", "srpm", "."],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
-    srpm_path = next(sg_path.glob("*.src.rpm"))
-    assert srpm_path.exists()
+    srpms = list(sg_path.glob("*.src.rpm"))
+    assert srpms, "No src.rpm found"
     if MOCK_BUILD:
         subprocess.check_call(
             [
@@ -73,7 +73,7 @@ def test_update(tmp_path: Path, package_name, branch):
                 "--rebuild",
                 "-r",
                 "centos-stream-x86_64",
-                srpm_path,
+                srpms[0],
             ]
         )
 
@@ -118,8 +118,8 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
         ["--debug", "srpm", "."],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
-    srpm_path = next(sg_path.glob("*.src.rpm"))
-    assert srpm_path.exists()
+    srpms = list(sg_path.glob("*.src.rpm"))
+    assert srpms, "No src.rpm found"
 
     # Check that patch commits are same
     assert len(first_round_commits) == len(second_round_commits)
@@ -141,7 +141,7 @@ def test_update_from_same_commit(tmp_path: Path, package_name, branch):
                 "--rebuild",
                 "-r",
                 "centos-stream-x86_64",
-                srpm_path,
+                srpms[0],
             ]
         )
 
@@ -187,8 +187,8 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
         ["--debug", "srpm", "."],
         working_dir=sg_path,  # _srcrpmdir rpm macro is set to /, let's CWD then
     )
-    srpm_path = next(sg_path.glob("*.src.rpm"))
-    assert srpm_path.exists()
+    srpms = list(sg_path.glob("*.src.rpm"))
+    assert srpms, "No src.rpm found"
     if MOCK_BUILD:
         subprocess.check_call(
             [
@@ -196,7 +196,7 @@ def test_update_source(tmp_path: Path, package_name, branch, old_version):
                 "--rebuild",
                 "-r",
                 "centos-stream-x86_64",
-                srpm_path,
+                srpms[0],
             ]
         )
 
@@ -235,8 +235,8 @@ def test_update_existing(tmp_path: Path, package):
         ["--debug", "srpm", "."],
         working_dir=source_git_path,
     )
-    srpm_path = next(source_git_path.glob("*.src.rpm"))
-    assert srpm_path.exists()
+    srpms = list(source_git_path.glob("*.src.rpm"))
+    assert srpms, "No src.rpm found"
 
 
 @pytest.mark.slow
@@ -269,8 +269,9 @@ def test_update_catch(tmp_path: Path):
         ["--debug", "srpm", "."],
         working_dir=source_git_path,
     )
-    srpm_path = next(source_git_path.glob("*.src.rpm"))
-    assert srpm_path.exists()
+    srpms = list(source_git_path.glob("*.src.rpm"))
+    assert srpms, "No src.rpm found"
+
     git_log_out = subprocess.check_output(
         ["git", "log", "--pretty=format:%s", "origin/c8.."], cwd=source_git_path
     ).decode()
