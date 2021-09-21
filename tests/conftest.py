@@ -88,7 +88,7 @@ def run_packit(*args, working_dir=None, **kwargs):
 
 def clone_package_rpms(
     package_name: str,
-    dist_git_path: str,
+    dist_git_path: Path,
     branch: str = "c8s",
 ):
     """
@@ -101,14 +101,14 @@ def clone_package_rpms(
             "-b",
             branch,
             f"https://git.centos.org/rpms/{package_name}.git",
-            dist_git_path,
+            str(dist_git_path),
         ]
     )
 
 
 def clone_package_src(
     package_name: str,
-    src_git_path: str,
+    src_git_path: Path,
     branch: str = "c8s",
 ):
     """
@@ -121,6 +121,6 @@ def clone_package_src(
             "-b",
             branch,
             f"https://gitlab.com/redhat/centos-stream/src/{package_name}.git",
-            src_git_path,
+            str(src_git_path),
         ]
     )
