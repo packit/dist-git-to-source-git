@@ -6,10 +6,10 @@
   hosts: all
   tasks:
     - name: Install packages for deployment
-      dnf:
+      package:
         name:
           - ansible
-          - python3-openshift
+          - python-openshift
           - make
       become: true
 

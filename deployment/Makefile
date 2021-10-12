@@ -1,4 +1,4 @@
-ANSIBLE_PYTHON := /usr/bin/python3
+ANSIBLE_PYTHON ?= $(shell command -v /usr/bin/python3 2> /dev/null || echo /usr/bin/python2)
 AP := ansible-playbook -vv -c local -i localhost, -e ansible_python_interpreter=$(ANSIBLE_PYTHON)
 # "By default, Ansible runs as if --tags all had been specified."
 # https://docs.ansible.com/ansible/latest/user_guide/playbooks_tags.html#special-tags
