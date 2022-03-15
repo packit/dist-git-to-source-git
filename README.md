@@ -91,8 +91,6 @@ target environment has to be used. This is achieved by running the conversion
 script in a container, built to match the target environment. By default this
 is CentOS 8.
 
-This is currently working only if converting with `convert-with-prep`.
-
 To build the image, run:
 
 ```
@@ -108,7 +106,7 @@ To run the conversion:
 
 ```
 podman run --rm -v $PWD:/workdir:z \
-    dist2src dist2src convert-with-prep rpms/<package>:<branch> source-git/<package>:<branch>
+    dist2src dist2src convert rpms/<package>:<branch> source-git/<package>:<branch>
 ```
 
 Where the current working directory has the package cloned in an `rpms`
