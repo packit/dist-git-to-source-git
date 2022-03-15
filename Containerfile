@@ -7,7 +7,6 @@ FROM $base_image
 
 # GIT_EDITOR: git cherry-pick --continue prompts editor, this is the only way to make it non-interactive
 ENV ANSIBLE_PYTHON_INTERPRETER=/usr/bin/python3 \
-    ANSIBLE_STDOUT_CALLBACK=debug \
     USER=packit \
     HOME=/home/packit \
     package_manager=${package_manager:-"dnf -y"} \
