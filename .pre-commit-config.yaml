@@ -38,5 +38,5 @@ repos:
     hooks:
       - id: check-rebase
         args:
-          - git://github.com/packit/dist-git-to-source-git.git
+          - https://github.com/packit/dist-git-to-source-git.git
         stages: [manual, push]
