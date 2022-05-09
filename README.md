@@ -3,6 +3,10 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Docker Repository on Quay](https://quay.io/repository/packit/dist2src/status "Docker Repository on Quay")](https://quay.io/repository/packit/dist2src)
 
+This project is no longer being developed so the repo is archived.
+
+[Please read details about the decommissioning.](https://github.com/packit/source-git-onboarding#decommissioning)
+
 # Converting dist-git to source-git
 
 This should be similar to [How to source-git?], except that it isn't :)
