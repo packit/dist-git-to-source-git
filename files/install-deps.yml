@@ -15,6 +15,7 @@
           - python3-sh
           - packit
           - nss_wrapper # for openshift so we can have regular packit user in pod
+          - python3-setuptools_scm
         state: latest
         enablerepo: powertools
     - name: Install tools required by %prep section of some packages
