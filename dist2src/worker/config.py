@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 from ogr import GitlabService, PagureService
-from requests.packages.urllib3.util import Retry
+from urllib3.util import Retry
 
 from dist2src.constants import GITLAB_SRC_NAMESPACE
 
