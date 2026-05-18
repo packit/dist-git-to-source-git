@@ -277,12 +277,9 @@ def test_update_catch(tmp_path: Path):
     ).decode()
     # the line below is really fragile
     # if it breaks, navigate to the source-git repo and check git history
-    assert (
-        git_log_out
-        == """Changes after running %prep
+    assert git_log_out == """Changes after running %prep
 Add sources defined in the spec file
 Add spec-file for the distribution
 .packit.yaml
 catch-2.2.1 base
 Prepare for a new update"""
-    )

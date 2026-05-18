@@ -4,6 +4,7 @@
 This module covers integration between external entities
 and emulates functionality... just kidding, it's just constants.
 """
+
 from typing import Iterable, Dict, Any, Tuple
 
 # These packages have complex %prep's which cannot be turned

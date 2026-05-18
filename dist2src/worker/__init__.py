@@ -3,7 +3,6 @@
 
 import re
 
-
 # When the namespace is a fork, "fork" is singular when accessing
 # the API, but plural in the Git URLs.
 # Furthermore:
